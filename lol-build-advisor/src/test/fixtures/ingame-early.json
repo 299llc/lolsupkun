@@ -1,0 +1,121 @@
+{
+  "status": "ingame",
+  "gameData": {
+    "gameData": { "gameTime": 360 },
+    "activePlayer": { "summonerName": "TestPlayer" },
+    "players": {
+      "me": {
+        "summonerName": "TestPlayer",
+        "championName": "アッシュ",
+        "enName": "Ashe",
+        "championId": 22,
+        "team": "ORDER",
+        "position": "BOTTOM",
+        "level": 6,
+        "scores": { "kills": 1, "deaths": 0, "assists": 2 },
+        "items": [
+          { "itemID": 1055, "displayName": "ドランブレード" },
+          { "itemID": 3006, "displayName": "バーサーカー ブーツ" }
+        ],
+        "flags": {}
+      },
+      "allies": [
+        {
+          "summonerName": "Ally1", "championName": "ガレン", "enName": "Garen", "championId": 86,
+          "team": "ORDER", "position": "TOP", "level": 6,
+          "scores": { "kills": 0, "deaths": 1, "assists": 0 },
+          "items": [{ "itemID": 1054, "displayName": "ドランシールド" }],
+          "flags": {}
+        },
+        {
+          "summonerName": "Ally2", "championName": "リー・シン", "enName": "LeeSin", "championId": 64,
+          "team": "ORDER", "position": "JUNGLE", "level": 6,
+          "scores": { "kills": 2, "deaths": 0, "assists": 1 },
+          "items": [{ "itemID": 1039, "displayName": "ロングソード" }],
+          "flags": {}
+        },
+        {
+          "summonerName": "Ally3", "championName": "アーリ", "enName": "Ahri", "championId": 103,
+          "team": "ORDER", "position": "MIDDLE", "level": 6,
+          "scores": { "kills": 1, "deaths": 1, "assists": 1 },
+          "items": [{ "itemID": 1056, "displayName": "ドランリング" }],
+          "flags": {}
+        },
+        {
+          "summonerName": "Ally4", "championName": "スレッシュ", "enName": "Thresh", "championId": 412,
+          "team": "ORDER", "position": "UTILITY", "level": 5,
+          "scores": { "kills": 0, "deaths": 0, "assists": 3 },
+          "items": [{ "itemID": 3862, "displayName": "レリックシールド" }],
+          "flags": {}
+        }
+      ],
+      "enemies": [
+        {
+          "summonerName": "Enemy1", "championName": "ダリウス", "enName": "Darius", "championId": 122,
+          "team": "CHAOS", "position": "TOP", "level": 6,
+          "scores": { "kills": 1, "deaths": 0, "assists": 0 },
+          "items": [{ "itemID": 1054, "displayName": "ドランシールド" }],
+          "flags": {}
+        },
+        {
+          "summonerName": "Enemy2", "championName": "ヴィ", "enName": "Vi", "championId": 254,
+          "team": "CHAOS", "position": "JUNGLE", "level": 6,
+          "scores": { "kills": 0, "deaths": 1, "assists": 1 },
+          "items": [{ "itemID": 1039, "displayName": "ロングソード" }],
+          "flags": {}
+        },
+        {
+          "summonerName": "Enemy3", "championName": "ゼド", "enName": "Zed", "championId": 238,
+          "team": "CHAOS", "position": "MIDDLE", "level": 6,
+          "scores": { "kills": 1, "deaths": 1, "assists": 0 },
+          "items": [{ "itemID": 1036, "displayName": "ロングソード" }],
+          "flags": { "assassin": true }
+        },
+        {
+          "summonerName": "Enemy4", "championName": "ジンクス", "enName": "Jinx", "championId": 222,
+          "team": "CHAOS", "position": "BOTTOM", "level": 5,
+          "scores": { "kills": 0, "deaths": 1, "assists": 0 },
+          "items": [{ "itemID": 1055, "displayName": "ドランブレード" }],
+          "flags": {}
+        },
+        {
+          "summonerName": "Enemy5", "championName": "ルル", "enName": "Lulu", "championId": 117,
+          "team": "CHAOS", "position": "UTILITY", "level": 5,
+          "scores": { "kills": 0, "deaths": 1, "assists": 0 },
+          "items": [{ "itemID": 3850, "displayName": "スペルシーフエッジ" }],
+          "flags": {}
+        }
+      ]
+    },
+    "myTeamSide": "ORDER",
+    "ddragon": "https://ddragon.leagueoflegends.com/cdn/15.6.1",
+    "ended": false
+  },
+  "coreBuild": {
+    "build_goal": [6672, 3085, 3031, 3094, 3036],
+    "build_goal_names": ["クラーケン スレイヤー", "ルナーン ハリケーン", "インフィニティ エッジ", "ラピッドファイアキャノン", "ロード ドミニクス リガード"],
+    "build_goal_images": ["6672.png", "3085.png", "3031.png", "3094.png", "3036.png"],
+    "changes": [],
+    "priority": "",
+    "reasoning": "OP.GG統計データに基づくコアビルド",
+    "isCoreBuild": true
+  },
+  "matchupTip": {
+    "opponent": "ジンクス",
+    "summary": "序盤はアッシュのWでポーク有利。ジンクスのロケット射程に注意。",
+    "details": [
+      "Lv1-3: Wでポーク → CS差をつける",
+      "ジンクスのチョンパーズ(E)の範囲に入らない",
+      "Lv6以降: アッシュultでキルチャンスを作る"
+    ],
+    "danger": 3
+  },
+  "objectivesStatus": {
+    "dragon": "ドラゴン: 未討伐 (スポーン済み・取得可能)",
+    "baron": "バロン: スポーンまで14:00",
+    "voidgrub": "ヴォイドグラブ: スポーン済み・取得可能",
+    "herald": "ヘラルド: スポーンまで9:00",
+    "gameTime": 360,
+    "debug": { "GameStart": 1, "MinionsSpawning": 1, "ChampionKill": 3 }
+  }
+}

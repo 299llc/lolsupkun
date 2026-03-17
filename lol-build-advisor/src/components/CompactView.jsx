@@ -1,0 +1,211 @@
+import { useEffect } from 'react'
+import { X, Navigation, Loader2, AlertTriangle } from 'lucide-react'
+import { ItemTooltip } from './ItemTooltip'
+
+function formatGameTime(seconds) {
+  if (seconds == null || seconds <= 0) return null
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+// ドラッグハンドル + 閉じるボタンのみ（極小）
+function CompactTitleBar({ status }) {
+  return (
+    <div className="drag-region flex items-center justify-between px-3 py-1">
+      <div className={`w-2 h-2 rounded-full ${status === 'ingame' ? 'bg-lol-blue' : status === 'ended' ? 'bg-lol-red' : 'bg-lol-gold animate-pulse'}`} />
+      <button
+        onClick={() => window.electronAPI?.compactClose()}
+        className="no-drag p-0.5 rounded text-white/30 hover:text-lol-red hover:bg-white/10 transition-colors"
+      >
+        <X size={10} />
+      </button>
+    </div>
+  )
+}
+
+// コアビルド + AI提案（アイコンのみ統合表示）
+function CompactItems({ coreBuild, suggestion, substituteItems, ownedItemIds, ddragon }) {
+  // コアビルドアイテム
+  const coreNames = coreBuild?.build_goal_names || []
+  const coreImages = coreBuild?.build_goal_images || []
+  const coreIds = (coreBuild?.build_goal || []).map(String)
+
+  // AI提案アイテム（コアと重複しないもの、トップ3）
+  const history = suggestion?.history || {}
+  const totalCalls = suggestion?.totalCalls || 0
+  const coreIdSet = new Set(coreIds)
+  const aiItems = (!suggestion || suggestion.error) ? [] :
+    [...(substituteItems || [])]
+      .filter(item => !ownedItemIds?.has(String(item.id)) && !coreIdSet.has(String(item.id)))
+      .filter(item => (history[String(item.id)]?.count || 0) > 0)
+      .sort((a, b) => (history[String(b.id)]?.count || 0) - (history[String(a.id)]?.count || 0))
+      .slice(0, 3)
+
+  if (coreNames.length === 0 && aiItems.length === 0) return null
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {/* コアビルド */}
+      {coreNames.map((item, i) => {
+        const imgUrl = ddragon && coreImages[i] ? `${ddragon}/img/item/${coreImages[i]}` : null
+        const isOwned = ownedItemIds?.has(String(coreIds[i]))
+        return (
+          <ItemTooltip key={`core-${i}`} itemId={coreIds[i]}>
+            <div className={`relative cursor-default ${isOwned ? 'opacity-30' : ''}`}>
+              {imgUrl ? (
+                <img src={imgUrl} alt={item} className="w-7 h-7 rounded border border-white/20"
+                  onError={(e) => { e.target.style.display = 'none' }} />
+              ) : (
+                <div className="w-7 h-7 rounded border border-white/10 bg-white/5 flex items-center justify-center">
+                  <span className="text-[9px] text-white/40">{i + 1}</span>
+                </div>
+              )}
+              {isOwned && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-lol-blue text-[10px] font-bold">✓</span>
+                </div>
+              )}
+            </div>
+          </ItemTooltip>
+        )
+      })}
+      {/* 区切り */}
+      {coreNames.length > 0 && aiItems.length > 0 && (
+        <div className="w-px h-5 bg-white/15 mx-0.5" />
+      )}
+      {/* AI提案 */}
+      {aiItems.map(item => {
+        const imgUrl = ddragon && item.image ? `${ddragon}/img/item/${item.image}` : null
+        return (
+          <ItemTooltip key={`ai-${item.id}`} itemId={item.id}>
+            <div className="relative cursor-default">
+              {imgUrl ? (
+                <img src={imgUrl} alt={item.name} className="w-7 h-7 rounded border border-lol-blue/40"
+                  onError={(e) => { e.target.style.display = 'none' }} />
+              ) : (
+                <div className="w-7 h-7 rounded border border-lol-blue/30 bg-white/5 flex items-center justify-center">
+                  <span className="text-[9px] text-white/40">AI</span>
+                </div>
+              )}
+            </div>
+          </ItemTooltip>
+        )
+      })}
+    </div>
+  )
+}
+
+// マクロアドバイス（アクションのみ）
+function CompactMacro({ advice, loading }) {
+  const hasError = advice?.error
+  const hasData = advice && !hasError
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-1.5">
+        <Navigation size={10} className="text-lol-blue/80" />
+        <span className="text-[10px] text-lol-blue/80 font-heading tracking-wider">MACRO</span>
+        {advice?.gameTime > 0 && (
+          <span className="text-[9px] text-white/30 ml-auto">{formatGameTime(advice.gameTime)}</span>
+        )}
+        {loading && <Loader2 size={10} className="text-lol-blue/60 animate-spin ml-auto" />}
+      </div>
+      {hasError ? (
+        <div className="flex items-start gap-1 px-1 py-1 rounded bg-red-500/10">
+          <AlertTriangle size={10} className="text-red-400/80 shrink-0 mt-0.5" />
+          <p className="text-[10px] text-red-400/80">{advice.error}</p>
+        </div>
+      ) : hasData ? (
+        <div className="px-1.5 py-1 rounded bg-white/5 space-y-0.5">
+          <p className="text-[11px] text-white/90 font-medium leading-snug">{advice.title || advice.action_short || advice.action}</p>
+          {advice.desc && (
+            <p className="text-[10px] text-white/55 leading-snug">{advice.desc}</p>
+          )}
+        </div>
+      ) : (
+        <p className="text-[10px] text-white/30 px-1">待機中...</p>
+      )}
+    </div>
+  )
+}
+
+// スキルオーダー（チャンプセレクト時）
+function CompactSkillOrder({ extras }) {
+  const skills = extras?.skills
+  if (!skills?.order) return null
+
+  return (
+    <div className="space-y-1">
+      <span className="text-[10px] text-lol-gold/80 font-heading tracking-wider">SKILL ORDER</span>
+      <div className="flex items-center gap-1.5">
+        {skills.order.map((skill, i) => (
+          <div key={i} className="flex items-center gap-0.5">
+            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+              i === 0 ? 'bg-lol-gold/20 text-lol-gold border border-lol-gold/30' :
+              i === 1 ? 'bg-lol-blue/15 text-lol-blue border border-lol-blue/25' :
+              'bg-white/5 text-white/50 border border-white/10'
+            }`}>
+              {skill}
+            </span>
+            {i < skills.order.length - 1 && (
+              <span className="text-[10px] text-white/30">＞</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// 対面情報（最小限）
+function CompactMatchup({ tip }) {
+  if (!tip) return null
+  return (
+    <div className="space-y-1">
+      <span className="text-[10px] text-lol-blue/80 font-heading tracking-wider">VS {tip.opponent?.toUpperCase()}</span>
+      {tip.summary && (
+        <p className="text-[10px] text-white/60 leading-snug px-1">{tip.summary}</p>
+      )}
+    </div>
+  )
+}
+
+export function CompactView({ status, gameData, coreBuild, aiSuggestion, aiLoading, substituteItems, macroAdvice, macroLoading, champSelectExtras, matchupTip }) {
+  const ddragon = gameData?.ddragon
+  const me = gameData?.players?.me
+  const ownedItemIds = new Set((me?.items || []).map(i => String(i.itemID)))
+  const isIngame = status === 'ingame' || status === 'ended'
+  const isChampSelect = status === 'champselect'
+
+  // body/html の背景を透明にしてウィンドウ透過を有効にする
+  useEffect(() => {
+    document.documentElement.style.background = 'transparent'
+    document.body.style.background = 'transparent'
+  }, [])
+
+  return (
+    <div className="h-screen flex flex-col overflow-hidden rounded-lg" style={{ background: 'rgba(1, 10, 19, 0.75)' }}>
+      <CompactTitleBar status={status} />
+
+      <div className="flex-1 overflow-y-auto px-3 pb-2 space-y-2.5">
+        {isIngame ? (
+          <>
+            <CompactItems
+              coreBuild={coreBuild}
+              suggestion={aiSuggestion}
+              substituteItems={substituteItems}
+              ownedItemIds={ownedItemIds}
+              ddragon={ddragon}
+            />
+            <CompactMacro advice={macroAdvice} loading={macroLoading} />
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-[10px] text-white/30">試合開始を待っています...</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

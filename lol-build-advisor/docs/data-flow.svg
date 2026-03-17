@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980">
+  <defs>
+    <style>
+      .bg { fill: #07111d; }
+      .panel { fill: #0f1e30; stroke: #c8aa6e; stroke-width: 2; rx: 18; ry: 18; }
+      .sub { fill: #11263d; stroke: #0ac8b9; stroke-width: 2; rx: 14; ry: 14; }
+      .store { fill: #1a2232; stroke: #7aa2f7; stroke-width: 2; rx: 14; ry: 14; }
+      .text { fill: #f2f4f8; font-family: "Segoe UI", "Noto Sans JP", sans-serif; font-size: 24px; }
+      .small { fill: #b8c2cf; font-family: "Segoe UI", "Noto Sans JP", sans-serif; font-size: 18px; }
+      .title { fill: #f7d99a; font-family: "Segoe UI Semibold", "Noto Sans JP", sans-serif; font-size: 30px; }
+      .label { fill: #8de0d7; font-family: "Segoe UI Semibold", "Noto Sans JP", sans-serif; font-size: 20px; }
+      .arrow { stroke: #d6dde7; stroke-width: 4; fill: none; marker-end: url(#arrowhead); }
+      .dashed { stroke-dasharray: 10 8; }
+    </style>
+    <marker id="arrowhead" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#d6dde7"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="980"/>
+
+  <text class="title" x="60" y="70">LoL Build Advisor Data Flow</text>
+  <text class="small" x="60" y="105">どのデータをどこから引いて、どこで加工し、どこへ渡しているか</text>
+
+  <rect class="panel" x="60" y="160" width="340" height="170"/>
+  <text class="text" x="90" y="210">LoL Game Client</text>
+  <text class="label" x="90" y="248">Live Client Data API</text>
+  <text class="small" x="90" y="286">https://127.0.0.1:2999</text>
+  <text class="small" x="90" y="316">取得データ:</text>
+  <text class="small" x="110" y="344">activePlayer / allPlayers / gameData</text>
+
+  <rect class="panel" x="60" y="410" width="340" height="210"/>
+  <text class="text" x="90" y="460">Data Dragon CDN</text>
+  <text class="label" x="90" y="498">パッチ依存の静的データ</text>
+  <text class="small" x="90" y="536">versions.json</text>
+  <text class="small" x="90" y="566">champion.json (en_US / ja_JP)</text>
+  <text class="small" x="90" y="596">item.json (en_US / ja_JP)</text>
+  <text class="small" x="90" y="626">champion/{name}.json</text>
+
+  <rect class="panel" x="60" y="700" width="340" height="150"/>
+  <text class="text" x="90" y="750">Anthropic Claude API</text>
+  <text class="label" x="90" y="788">AI ビルド提案</text>
+  <text class="small" x="90" y="826">入力: 整形済みコンテキスト + アイテム候補一覧</text>
+
+  <rect class="panel" x="520" y="120" width="450" height="760"/>
+  <text class="text" x="550" y="170">Electron Main Process</text>
+  <text class="small" x="550" y="205">[electron/main.js]</text>
+
+  <rect class="sub" x="550" y="240" width="390" height="110"/>
+  <text class="label" x="575" y="282">1. LiveClientPoller</text>
+  <text class="small" x="575" y="318">[electron/api/liveClient.js]</text>
+  <text class="small" x="575" y="342">3秒ごとに allgamedata を取得</text>
+
+  <rect class="sub" x="550" y="380" width="390" height="120"/>
+  <text class="label" x="575" y="422">2. PatchData 初期化</text>
+  <text class="small" x="575" y="458">[electron/api/patchData.js]</text>
+  <text class="small" x="575" y="482">チャンピオン、アイテム、スキル説明を取得</text>
+
+  <rect class="sub" x="550" y="530" width="390" height="120"/>
+  <text class="label" x="575" y="572">3. ゲーム状態の整形</text>
+  <text class="small" x="575" y="608">自分 / 味方 / 敵 を振り分け</text>
+  <text class="small" x="575" y="632">flags: tank / healer / cc などを付与</text>
+
+  <rect class="sub" x="550" y="680" width="390" height="150"/>
+  <text class="label" x="575" y="722">4. AI 実行判定と問い合わせ</text>
+  <text class="small" x="575" y="758">DiffDetector で差分確認</text>
+  <text class="small" x="575" y="782">ContextBuilder で AI 向け文章を生成</text>
+  <text class="small" x="575" y="806">ClaudeApiClient で提案 JSON を取得</text>
+
+  <rect class="panel" x="1100" y="180" width="420" height="280"/>
+  <text class="text" x="1130" y="230">Renderer / React UI</text>
+  <text class="small" x="1130" y="265">[src/App.jsx] [src/hooks/useGameData.js]</text>
+
+  <rect class="sub" x="1130" y="300" width="360" height="120"/>
+  <text class="label" x="1155" y="342">IPC で受信</text>
+  <text class="small" x="1155" y="378">game:status / game:data</text>
+  <text class="small" x="1155" y="402">ai:suggestion / ai:loading</text>
+
+  <rect class="panel" x="1100" y="550" width="420" height="220"/>
+  <text class="text" x="1130" y="600">画面表示</text>
+  <text class="small" x="1130" y="635">[MainScreen.jsx] [TeamList.jsx]</text>
+  <text class="small" x="1130" y="671">試合時間 / KDA / 味方敵一覧</text>
+  <text class="small" x="1130" y="701">AI ビルド提案</text>
+  <text class="small" x="1130" y="731">設定画面で API キーと AI ON/OFF</text>
+
+  <rect class="store" x="1110" y="810" width="400" height="90"/>
+  <text class="label" x="1135" y="852">ローカル保存</text>
+  <text class="small" x="1135" y="882">userData/.api-key に Anthropic API キーを保存</text>
+
+  <path class="arrow" d="M 400 245 L 550 295"/>
+  <path class="arrow" d="M 400 515 L 550 440"/>
+  <path class="arrow" d="M 400 775 L 550 745"/>
+
+  <path class="arrow" d="M 745 350 L 745 380"/>
+  <path class="arrow" d="M 745 500 L 745 530"/>
+  <path class="arrow" d="M 745 650 L 745 680"/>
+
+  <path class="arrow" d="M 940 745 L 1100 355"/>
+  <path class="arrow" d="M 1310 460 L 1310 550"/>
+  <path class="arrow dashed" d="M 1310 770 L 1310 810"/>
+
+  <text class="small" x="950" y="322">IPC</text>
+  <text class="small" x="1330" y="510">描画</text>
+
+  <path class="arrow dashed" d="M 940 430 C 1030 430, 1030 860, 1110 860"/>
+  <text class="small" x="955" y="845">設定画面から保存</text>
+</svg>

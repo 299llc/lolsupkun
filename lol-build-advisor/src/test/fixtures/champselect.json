@@ -1,0 +1,40 @@
+{
+  "status": "champselect",
+  "gameData": {
+    "ddragon": "https://ddragon.leagueoflegends.com/cdn/15.6.1"
+  },
+  "coreBuild": {
+    "build_goal": [6672, 3085, 3031, 3094, 3036],
+    "build_goal_names": ["クラーケン スレイヤー", "ルナーン ハリケーン", "インフィニティ エッジ", "ラピッドファイアキャノン", "ロード ドミニクス リガード"],
+    "build_goal_images": ["6672.png", "3085.png", "3031.png", "3094.png", "3036.png"],
+    "changes": [],
+    "priority": "",
+    "reasoning": "OP.GG統計データに基づくコアビルド",
+    "isCoreBuild": true
+  },
+  "champSelectTeam": [
+    { "championId": 86, "enName": "Garen", "jaName": "ガレン", "tags": ["Fighter", "Tank"], "isMe": false },
+    { "championId": 64, "enName": "LeeSin", "jaName": "リー・シン", "tags": ["Fighter", "Assassin"], "isMe": false },
+    { "championId": 103, "enName": "Ahri", "jaName": "アーリ", "tags": ["Mage", "Assassin"], "isMe": false },
+    { "championId": 22, "enName": "Ashe", "jaName": "アッシュ", "tags": ["Marksman", "Support"], "isMe": true },
+    { "championId": 412, "enName": "Thresh", "jaName": "スレッシュ", "tags": ["Tank", "Support"], "isMe": false }
+  ],
+  "champSelectExtras": {
+    "summonerSpells": [
+      { "ids": [4, 7], "winRate": 52.1, "pickRate": 68.3 },
+      { "ids": [4, 21], "winRate": 50.8, "pickRate": 18.5 },
+      { "ids": [4, 1], "winRate": 49.2, "pickRate": 8.1 }
+    ],
+    "skills": {
+      "order": ["W", "Q", "E"],
+      "tree": ["W","Q","E","W","W","R","Q","W","Q","W","R","Q","Q","E","E","R","E","E"],
+      "pickRate": 72.4
+    },
+    "runes": {
+      "primaryPage": "プレスアタック",
+      "primaryRunes": ["オーバーヒール", "レジェンド：迅速", "最期の慈悲"],
+      "secondaryPage": "魔道",
+      "secondaryRunes": ["マナフローバンド", "強まる嵐"]
+    }
+  }
+}

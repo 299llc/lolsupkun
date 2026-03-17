@@ -1,0 +1,92 @@
+{
+  "status": "ingame",
+  "gameData": {
+    "gameData": { "gameTime": 120 },
+    "activePlayer": { "summonerName": "TestPlayer" },
+    "players": {
+      "me": {
+        "summonerName": "TestPlayer",
+        "championName": "ヴェックス",
+        "enName": "Vex",
+        "championId": 711,
+        "team": "ORDER",
+        "position": "NONE",
+        "level": 3,
+        "scores": { "kills": 0, "deaths": 0, "assists": 0 },
+        "items": [{ "itemID": 1056, "displayName": "ドランリング" }],
+        "flags": {}
+      },
+      "allies": [
+        {
+          "summonerName": "Ally1", "championName": "セト", "enName": "Sett", "championId": 875,
+          "team": "ORDER", "position": "NONE", "level": 3,
+          "scores": { "kills": 0, "deaths": 0, "assists": 0 },
+          "items": [],
+          "flags": {}
+        },
+        {
+          "summonerName": "Ally2", "championName": "ケイン", "enName": "Kayn", "championId": 141,
+          "team": "ORDER", "position": "NONE", "level": 3,
+          "scores": { "kills": 0, "deaths": 0, "assists": 0 },
+          "items": [],
+          "flags": {}
+        },
+        {
+          "summonerName": "Ally3", "championName": "ケイトリン", "enName": "Caitlyn", "championId": 51,
+          "team": "ORDER", "position": "NONE", "level": 2,
+          "scores": { "kills": 0, "deaths": 0, "assists": 0 },
+          "items": [],
+          "flags": {}
+        },
+        {
+          "summonerName": "Ally4", "championName": "ナミ", "enName": "Nami", "championId": 267,
+          "team": "ORDER", "position": "NONE", "level": 2,
+          "scores": { "kills": 0, "deaths": 0, "assists": 0 },
+          "items": [],
+          "flags": {}
+        }
+      ],
+      "enemies": [
+        {
+          "summonerName": "Enemy1", "championName": "モルデカイザー", "enName": "Mordekaiser", "championId": 82,
+          "team": "CHAOS", "position": "NONE", "level": 3,
+          "scores": { "kills": 0, "deaths": 0, "assists": 0 },
+          "items": [],
+          "flags": {}
+        },
+        {
+          "summonerName": "Enemy2", "championName": "エリス", "enName": "Elise", "championId": 60,
+          "team": "CHAOS", "position": "NONE", "level": 3,
+          "scores": { "kills": 0, "deaths": 0, "assists": 0 },
+          "items": [],
+          "flags": {}
+        },
+        {
+          "summonerName": "Enemy3", "championName": "シンドラ", "enName": "Syndra", "championId": 134,
+          "team": "CHAOS", "position": "NONE", "level": 3,
+          "scores": { "kills": 0, "deaths": 0, "assists": 0 },
+          "items": [],
+          "flags": {}
+        },
+        {
+          "summonerName": "Enemy4", "championName": "ドレイヴン", "enName": "Draven", "championId": 119,
+          "team": "CHAOS", "position": "NONE", "level": 2,
+          "scores": { "kills": 0, "deaths": 0, "assists": 0 },
+          "items": [],
+          "flags": {}
+        },
+        {
+          "summonerName": "Enemy5", "championName": "レオナ", "enName": "Leona", "championId": 89,
+          "team": "CHAOS", "position": "NONE", "level": 2,
+          "scores": { "kills": 0, "deaths": 0, "assists": 0 },
+          "items": [],
+          "flags": {}
+        }
+      ]
+    },
+    "myTeamSide": "ORDER",
+    "ddragon": "https://ddragon.leagueoflegends.com/cdn/15.6.1",
+    "ended": false
+  },
+  "positionSelectChamp": "Vex"
+}

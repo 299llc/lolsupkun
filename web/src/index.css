@@ -1,0 +1,232 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  /* LoL カスタムカラー */
+  --color-lol-gold: #C8AA6E;
+  --color-lol-teal: #0AC8B9;
+  --color-lol-red: #E84057;
+  --color-lol-dark: #010A13;
+  --color-lol-surface: #0A1428;
+  --color-lol-surface2: #0A1E32;
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: #010A13;
+  --foreground: #C8AA6E;
+  --card: #0A1428;
+  --card-foreground: #e2e8f0;
+  --popover: #0A1428;
+  --popover-foreground: #e2e8f0;
+  --primary: #C8AA6E;
+  --primary-foreground: #010A13;
+  --secondary: #0A1E32;
+  --secondary-foreground: #e2e8f0;
+  --muted: #0A1E32;
+  --muted-foreground: #94a3b8;
+  --accent: #0AC8B9;
+  --accent-foreground: #010A13;
+  --destructive: #E84057;
+  --border: rgba(200, 170, 110, 0.25);
+  --input: rgba(200, 170, 110, 0.15);
+  --ring: #C8AA6E;
+  --font-sans: "Noto Sans JP", sans-serif;
+  --font-mono: ui-monospace, monospace;
+  --chart-1: #C8AA6E;
+  --chart-2: #0AC8B9;
+  --chart-3: #E84057;
+  --chart-4: #4a6fa5;
+  --chart-5: #7b68ee;
+  --sidebar: #0A1428;
+  --sidebar-foreground: #e2e8f0;
+  --sidebar-primary: #C8AA6E;
+  --sidebar-primary-foreground: #010A13;
+  --sidebar-accent: #0A1E32;
+  --sidebar-accent-foreground: #e2e8f0;
+  --sidebar-border: rgba(200, 170, 110, 0.25);
+  --sidebar-ring: #C8AA6E;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Noto Sans JP", sans-serif;
+  }
+  html {
+    @apply font-sans;
+    scroll-behavior: smooth;
+  }
+}
+
+/* LoL テーマ ユーティリティ */
+.font-orbitron {
+  font-family: 'Orbitron', sans-serif;
+}
+
+.text-gold {
+  color: #C8AA6E;
+}
+
+.text-teal {
+  color: #0AC8B9;
+}
+
+.text-lol-red {
+  color: #E84057;
+}
+
+.bg-lol-surface {
+  background-color: #0A1428;
+}
+
+.bg-lol-surface2 {
+  background-color: #0A1E32;
+}
+
+.border-gold {
+  border-color: rgba(200, 170, 110, 0.4);
+}
+
+.border-teal {
+  border-color: rgba(10, 200, 185, 0.4);
+}
+
+/* グローエフェクト */
+.glow-gold {
+  box-shadow: 0 0 20px rgba(200, 170, 110, 0.3), 0 0 40px rgba(200, 170, 110, 0.1);
+}
+
+.glow-teal {
+  box-shadow: 0 0 20px rgba(10, 200, 185, 0.3), 0 0 40px rgba(10, 200, 185, 0.1);
+}
+
+.text-glow-gold {
+  text-shadow: 0 0 20px rgba(200, 170, 110, 0.5);
+}
+
+/* アニメーション */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-gold {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-gold {
+  animation: pulse-gold 2s ease-in-out infinite;
+}
+
+.shimmer-text {
+  background: linear-gradient(90deg, #C8AA6E 0%, #f0d898 40%, #C8AA6E 60%, #9a7c4a 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Hero グラデーション背景 */
+.hero-bg {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(10, 200, 185, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(200, 170, 110, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, rgba(232, 64, 87, 0.05) 0%, transparent 50%),
+    #010A13;
+}
+
+/* カードホバー */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(200, 170, 110, 0.15);
+  border-color: rgba(200, 170, 110, 0.5);
+}
+
+/* ゴールドライン区切り */
+.gold-divider {
+  background: linear-gradient(90deg, transparent, #C8AA6E, transparent);
+  height: 1px;
+}
+
+/* スクロールアニメーション */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+/* Accordion カスタム */
+[data-slot="accordion-content"] {
+  color: #94a3b8;
+}

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-electron/
+out/
+.vite/
+*.log
+.env
+.env.local
+release/
+build/
+.claude/

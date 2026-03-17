@@ -1,0 +1,146 @@
+const { contextBridge, ipcRenderer } = require('electron')
+
+contextBridge.exposeInMainWorld('electronAPI', {
+  // ウィンドウ操作
+  minimize: () => ipcRenderer.send('window:minimize'),
+  close: () => ipcRenderer.send('window:close'),
+
+  // APIキー
+  getApiKey: () => ipcRenderer.invoke('apikey:get'),
+  setApiKey: (key) => ipcRenderer.invoke('apikey:set', key),
+  validateApiKey: (key) => ipcRenderer.invoke('apikey:validate', key),
+
+  // ポーリング
+  startPolling: () => ipcRenderer.invoke('polling:start'),
+  stopPolling: () => ipcRenderer.invoke('polling:stop'),
+
+  // AI ON/OFF
+  toggleAi: (enabled) => ipcRenderer.invoke('ai:toggle', enabled),
+  getAiStatus: () => ipcRenderer.invoke('ai:status'),
+
+  // 最前面 ON/OFF
+  toggleOnTop: (enabled) => ipcRenderer.invoke('ontop:toggle', enabled),
+  getOnTopStatus: () => ipcRenderer.invoke('ontop:status'),
+
+  // デバッグ
+  getAiLogs: () => ipcRenderer.invoke('ai:logs'),
+  clearAiLogs: () => ipcRenderer.invoke('ai:clearLogs'),
+  getDebugState: () => ipcRenderer.invoke('debug:state'),
+  isDev: () => ipcRenderer.invoke('app:isDev'),
+
+  // イベント購読
+  onGameStatus: (cb) => {
+    const handler = (_, status) => cb(status)
+    ipcRenderer.on('game:status', handler)
+    return () => ipcRenderer.removeListener('game:status', handler)
+  },
+  onGameData: (cb) => {
+    const handler = (_, data) => cb(data)
+    ipcRenderer.on('game:data', handler)
+    return () => ipcRenderer.removeListener('game:data', handler)
+  },
+  onAiSuggestion: (cb) => {
+    const handler = (_, suggestion) => cb(suggestion)
+    ipcRenderer.on('ai:suggestion', handler)
+    return () => ipcRenderer.removeListener('ai:suggestion', handler)
+  },
+  onAiLoading: (cb) => {
+    const handler = (_, loading) => cb(loading)
+    ipcRenderer.on('ai:loading', handler)
+    return () => ipcRenderer.removeListener('ai:loading', handler)
+  },
+  // ポジション手動選択
+  setPosition: (position) => ipcRenderer.invoke('position:set', position),
+  onPositionSelect: (cb) => {
+    const handler = (_, champName) => cb(champName)
+    ipcRenderer.on('position:select', handler)
+    return () => ipcRenderer.removeListener('position:select', handler)
+  },
+
+  // アイテム詳細
+  getItemDetail: (itemId) => ipcRenderer.invoke('item:detail', itemId),
+
+  // キャッシュ強制再取得
+  refreshCache: () => ipcRenderer.invoke('cache:refresh'),
+
+  // 観戦モード: プレイヤー選択
+  selectSpectatorPlayer: (name) => ipcRenderer.invoke('spectator:select', name),
+
+  onChampSelectTeam: (cb) => {
+    const handler = (_, team) => cb(team)
+    ipcRenderer.on('champselect:team', handler)
+    return () => ipcRenderer.removeListener('champselect:team', handler)
+  },
+  onCoreBuild: (cb) => {
+    const handler = (_, build) => cb(build)
+    ipcRenderer.on('core:build', handler)
+    return () => ipcRenderer.removeListener('core:build', handler)
+  },
+  onSubstituteItems: (cb) => {
+    const handler = (_, items) => cb(items)
+    ipcRenderer.on('substitute:items', handler)
+    return () => ipcRenderer.removeListener('substitute:items', handler)
+  },
+  onSubstituteError: (cb) => {
+    const handler = (_, msg) => cb(msg)
+    ipcRenderer.on('substitute:error', handler)
+    return () => ipcRenderer.removeListener('substitute:error', handler)
+  },
+  onMatchupTip: (cb) => {
+    const handler = (_, tip) => cb(tip)
+    ipcRenderer.on('matchup:tip', handler)
+    return () => ipcRenderer.removeListener('matchup:tip', handler)
+  },
+  onCoachingResult: (cb) => {
+    const handler = (_, result) => cb(result)
+    ipcRenderer.on('coaching:result', handler)
+    return () => ipcRenderer.removeListener('coaching:result', handler)
+  },
+  onCoachingLoading: (cb) => {
+    const handler = (_, loading) => cb(loading)
+    ipcRenderer.on('coaching:loading', handler)
+    return () => ipcRenderer.removeListener('coaching:loading', handler)
+  },
+  onChampSelectExtras: (cb) => {
+    const handler = (_, extras) => cb(extras)
+    ipcRenderer.on('champselect:extras', handler)
+    return () => ipcRenderer.removeListener('champselect:extras', handler)
+  },
+  onMacroAdvice: (cb) => {
+    const handler = (_, advice) => cb(advice)
+    ipcRenderer.on('macro:advice', handler)
+    return () => ipcRenderer.removeListener('macro:advice', handler)
+  },
+  onMacroLoading: (cb) => {
+    const handler = (_, loading) => cb(loading)
+    ipcRenderer.on('macro:loading', handler)
+    return () => ipcRenderer.removeListener('macro:loading', handler)
+  },
+  onObjectivesStatus: (cb) => {
+    const handler = (_, status) => cb(status)
+    ipcRenderer.on('objectives:status', handler)
+    return () => ipcRenderer.removeListener('objectives:status', handler)
+  },
+
+  // コンパクトビュー
+  toggleCompactView: () => ipcRenderer.invoke('compact:toggle'),
+  getCompactStatus: () => ipcRenderer.invoke('compact:status'),
+  onCompactStatus: (cb) => {
+    const handler = (_, status) => cb(status)
+    ipcRenderer.on('compact:status', handler)
+    return () => ipcRenderer.removeListener('compact:status', handler)
+  },
+  compactClose: () => ipcRenderer.send('compact:close'),
+
+  // 前回試合結果
+  getLastGame: () => ipcRenderer.invoke('lastgame:get'),
+
+  // セッションレコーダー
+  recorderList: () => ipcRenderer.invoke('recorder:list'),
+  recorderLoad: (filepath) => ipcRenderer.invoke('recorder:load', filepath),
+  recorderToggle: () => ipcRenderer.invoke('recorder:toggle'),
+  recorderStatus: () => ipcRenderer.invoke('recorder:status'),
+
+  // ゲームログ
+  openGameLogFolder: () => ipcRenderer.invoke('gamelog:openFolder'),
+})

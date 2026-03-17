@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=420, initial-scale=1.0">
+<title>LoL Build Advisor — Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Theme ──────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #010A13;
+  --surface: #0A1428;
+  --surface-light: #0E2240;
+  --gold: #C8AA6E;
+  --gold-dim: #785A28;
+  --gold-glow: #C8AA6E40;
+  --blue: #0AC8B9;
+  --blue-dim: #0AC8B930;
+  --red: #E84057;
+  --red-dim: #E8405730;
+  --text: #A09B8C;
+  --text-light: #F0E6D2;
+  --font-heading: 'Orbitron', sans-serif;
+  --font-body: 'Noto Sans JP', sans-serif;
+}
+
+body {
+  width: 420px;
+  min-height: 700px;
+  background: var(--bg);
+  color: var(--text-light);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle noise texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── Scrollbar ──────────────────────────────── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+
+/* ── Animations ─────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 4px var(--gold-glow); }
+  50% { box-shadow: 0 0 12px var(--gold-glow), 0 0 24px var(--gold-glow); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.fade-up { animation: fadeUp 0.4s ease-out both; }
+.fade-up-1 { animation-delay: 0.05s; }
+.fade-up-2 { animation-delay: 0.1s; }
+.fade-up-3 { animation-delay: 0.15s; }
+.fade-up-4 { animation-delay: 0.2s; }
+.fade-up-5 { animation-delay: 0.25s; }
+
+/* ── Title Bar ──────────────────────────────── */
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid rgba(200, 170, 110, 0.12);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+}
+.titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 0 6px var(--blue), 0 0 12px rgba(10, 200, 185, 0.3);
+}
+.titlebar-title {
+  font-family: var(--font-heading);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+.titlebar-controls {
+  display: flex;
+  gap: 2px;
+}
+.titlebar-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+.titlebar-btn:hover { background: var(--surface-light); color: var(--text-light); }
+.titlebar-btn.close:hover { background: rgba(232, 64, 87, 0.15); color: var(--red); }
+
+/* ── Game Timer ─────────────────────────────── */
+.timer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 0;
+}
+.timer-icon {
+  color: var(--gold);
+  font-size: 11px;
+}
+.timer-value {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px var(--gold-glow);
+}
+
+/* ── Team List ──────────────────────────────── */
+.team-section {
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid;
+}
+.team-ally { border-color: rgba(10, 200, 185, 0.2); }
+.team-enemy { border-color: rgba(232, 64, 87, 0.2); }
+
+.team-header {
+  padding: 4px 12px;
+  font-family: var(--font-heading);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 3px;
+}
+.team-ally .team-header {
+  color: var(--blue);
+  background: linear-gradient(90deg, rgba(10, 200, 185, 0.08), transparent);
+  border-bottom: 1px solid rgba(10, 200, 185, 0.12);
+}
+.team-enemy .team-header {
+  color: var(--red);
+  background: linear-gradient(90deg, rgba(232, 64, 87, 0.08), transparent);
+  border-bottom: 1px solid rgba(232, 64, 87, 0.12);
+}
+
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-bottom: 1px solid rgba(10, 20, 40, 0.5);
+  transition: background 0.15s;
+}
+.player-row:last-child { border-bottom: none; }
+.player-row:hover { background: rgba(255, 255, 255, 0.02); }
+.player-row.is-me { background: rgba(200, 170, 110, 0.04); }
+
+.player-champ {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.player-row.is-me .player-champ { color: var(--gold); }
+
+.player-kda {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+}
+.kda-slash { color: var(--text); opacity: 0.5; }
+.kda-death-high { color: var(--red); }
+.kda-kill-high { color: #4fc978; }
+
+.player-cs {
+  width: 42px;
+  text-align: right;
+  font-size: 10px;
+  color: var(--text);
+}
+.player-lv {
+  width: 28px;
+  text-align: right;
+  font-size: 10px;
+  color: var(--gold-dim);
+}
+
+/* ── Fed badge ── */
+.fed-badge {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  font-family: var(--font-heading);
+}
+.fed-badge.danger { background: rgba(232, 64, 87, 0.15); color: var(--red); }
+.fed-badge.heal { background: rgba(76, 175, 80, 0.15); color: #66bb6a; }
+.fed-badge.tank { background: rgba(100, 149, 237, 0.15); color: #6495ed; }
+
+/* ── Build Recommendation ───────────────────── */
+.build-section {
+  border-radius: 6px;
+  border: 1px solid rgba(200, 170, 110, 0.2);
+  overflow: hidden;
+  position: relative;
+}
+.build-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.4;
+}
+
+.build-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(200, 170, 110, 0.12);
+  background: linear-gradient(90deg, rgba(200, 170, 110, 0.05), transparent);
+}
+.build-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.build-header-icon {
+  font-size: 11px;
+}
+.build-header-title {
+  font-family: var(--font-heading);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 2.5px;
+}
+.gold-display {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffd700;
+  text-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
+}
+
+.build-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Buy Now */
+.buy-now-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-heading);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--blue);
+  letter-spacing: 1.5px;
+  margin-bottom: 4px;
+}
+.buy-now-box {
+  padding: 8px 12px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, rgba(10, 200, 185, 0.08), rgba(10, 200, 185, 0.03));
+  border: 1px solid rgba(10, 200, 185, 0.15);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-light);
+  position: relative;
+  overflow: hidden;
+}
+.buy-now-box::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--blue), transparent);
+  opacity: 0.5;
+}
+
+/* Full Build */
+.full-build-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-heading);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 1.5px;
+  margin-bottom: 4px;
+}
+.full-build-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.full-build-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: rgba(14, 34, 64, 0.4);
+  transition: background 0.15s;
+}
+.full-build-item:hover { background: rgba(14, 34, 64, 0.7); }
+.full-build-num {
+  font-family: var(--font-heading);
+  font-size: 9px;
+  color: var(--gold-dim);
+  min-width: 14px;
+}
+.full-build-name {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+/* Reasoning */
+.reasoning-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-heading);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 1.5px;
+  margin-bottom: 3px;
+}
+.reasoning-text {
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1.6;
+  padding: 0 4px;
+}
+
+/* Tips */
+.tips-box {
+  padding: 8px 10px;
+  border-radius: 5px;
+  background: rgba(200, 170, 110, 0.04);
+  border: 1px solid rgba(200, 170, 110, 0.1);
+  font-size: 10px;
+  color: var(--gold);
+  line-height: 1.6;
+}
+
+/* ── Content Wrapper ────────────────────────── */
+.content {
+  padding: 8px 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: calc(700px - 42px);
+}
+
+/* ── Waiting Screen ─────────────────────────── */
+.waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: calc(700px - 42px);
+  gap: 24px;
+  padding: 32px;
+}
+.spinner-ring {
+  width: 56px;
+  height: 56px;
+  border: 2px solid rgba(200, 170, 110, 0.1);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1.2s linear infinite;
+  animation: pulse-glow 2s ease-in-out infinite, spin 1.2s linear infinite;
+}
+.waiting-text {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  color: var(--gold);
+  letter-spacing: 2px;
+}
+.waiting-sub {
+  font-size: 11px;
+  color: var(--text);
+  text-align: center;
+}
+.waiting-tip {
+  margin-top: 20px;
+  padding: 10px 14px;
+  border: 1px solid rgba(200, 170, 110, 0.12);
+  border-radius: 6px;
+  background: rgba(10, 20, 40, 0.4);
+  font-size: 10px;
+  color: var(--text);
+  line-height: 1.6;
+  max-width: 280px;
+  text-align: center;
+}
+
+/* ── Loading shimmer ────────────────────────── */
+.ai-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--gold);
+}
+.ai-loading-dot {
+  width: 4px;
+  height: 4px;
+  background: var(--gold);
+  border-radius: 50%;
+  animation: pulse-glow 1s ease-in-out infinite;
+}
+.ai-loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.ai-loading-dot:nth-child(3) { animation-delay: 0.4s; }
+</style>
+</head>
+<body>
+
+<!-- ━━━ DEMO TOGGLE ━━━ -->
+<div id="app-root"></div>
+
+<script>
+// ── Mock Data ──────────────────────────────────
+const MOCK_ALLIES = [
+  { champ: 'Garen', kda: [3, 1, 4], cs: 156, lv: 12, isMe: false },
+  { champ: 'Elise', kda: [5, 3, 8], cs: 112, lv: 11, isMe: false },
+  { champ: 'Ahri', kda: [2, 2, 5], cs: 178, lv: 12, isMe: false },
+  { champ: 'Jinx', kda: [4, 2, 7], cs: 187, lv: 12, isMe: true },
+  { champ: 'Thresh', kda: [1, 2, 12], cs: 24, lv: 10, isMe: false },
+]
+
+const MOCK_ENEMIES = [
+  { champ: 'Malphite', kda: [2, 2, 5], cs: 141, lv: 11, badges: ['tank'] },
+  { champ: 'Amumu', kda: [1, 4, 8], cs: 98, lv: 10, badges: ['tank'] },
+  { champ: 'Zed', kda: [8, 1, 3], cs: 201, lv: 14, badges: ['danger'] },
+  { champ: "Kai'Sa", kda: [3, 3, 4], cs: 176, lv: 11, badges: [] },
+  { champ: 'Soraka', kda: [0, 2, 14], cs: 18, lv: 10, badges: ['heal'] },
+]
+
+const MOCK_SUGGESTION = {
+  buy_now: "Executioner's Calling",
+  full_build: [
+    "Lord Dominik's Regards",
+    "Bloodthirster",
+    "Guardian Angel",
+    "Mortal Reminder"
+  ],
+  reasoning: "敵SorakaのアシストAI14が非常に高く回復量が危険水域。まずは800Gで買えるExecutioner's Callingで回復阻害を確保。Malphite+AmumuのArmorスタックにはLDRの%貫通で対応。フェッドZed対策にGAを3番目に積む。",
+  tips: "集団戦ではZedのult対象になりやすい。ThreshのLanternを常に意識し、フロントラインの後ろからDPSを出すこと。ドラゴン戦前にリコールしてExecutioner's Callingを完成させたい。"
+}
+
+// ── Render Functions ───────────────────────────
+function renderBadge(type) {
+  const labels = { danger: 'FED', heal: 'HEAL', tank: 'TANK' }
+  return `<span class="fed-badge ${type}">${labels[type]}</span>`
+}
+
+function renderPlayerRow(p, isEnemy = false) {
+  const meClass = p.isMe ? ' is-me' : ''
+  const [k, d, a] = p.kda
+  const deathClass = d >= 5 ? ' kda-death-high' : ''
+  const killClass = k >= 6 ? ' kda-kill-high' : ''
+  const badges = (p.badges || []).map(renderBadge).join(' ')
+
+  return `
+    <div class="player-row${meClass}">
+      <div class="player-champ">${p.champ}</div>
+      ${badges ? `<div>${badges}</div>` : ''}
+      <div class="player-kda">
+        <span class="${killClass}">${k}</span><span class="kda-slash">/</span><span class="${deathClass}">${d}</span><span class="kda-slash">/</span><span>${a}</span>
+      </div>
+      <div class="player-cs">${p.cs}cs</div>
+      <div class="player-lv">Lv${p.lv}</div>
+    </div>
+  `
+}
+
+function renderMainScreen() {
+  return `
+    <div class="content">
+      <!-- Timer -->
+      <div class="timer fade-up">
+        <span class="timer-icon">⏱</span>
+        <span class="timer-value">22:34</span>
+      </div>
+
+      <!-- Ally Team -->
+      <div class="team-section team-ally fade-up fade-up-1">
+        <div class="team-header">ALLY</div>
+        ${MOCK_ALLIES.map(p => renderPlayerRow(p)).join('')}
+      </div>
+
+      <!-- Enemy Team -->
+      <div class="team-section team-enemy fade-up fade-up-2">
+        <div class="team-header">ENEMY</div>
+        ${MOCK_ENEMIES.map(p => renderPlayerRow(p, true)).join('')}
+      </div>
+
+      <!-- AI Build -->
+      <div class="build-section fade-up fade-up-3">
+        <div class="build-header">
+          <div class="build-header-left">
+            <span class="build-header-icon">✦</span>
+            <span class="build-header-title">AI BUILD</span>
+          </div>
+          <span class="gold-display">1,247G</span>
+        </div>
+        <div class="build-body">
+          <!-- Buy Now -->
+          <div>
+            <div class="buy-now-label">
+              <span>🛒</span>
+              <span>BUY NOW</span>
+            </div>
+            <div class="buy-now-box">${MOCK_SUGGESTION.buy_now}</div>
+          </div>
+
+          <!-- Full Build -->
+          <div>
+            <div class="full-build-label">
+              <span>🎯</span>
+              <span>FULL BUILD</span>
+            </div>
+            <div class="full-build-list">
+              ${MOCK_SUGGESTION.full_build.map((item, i) => `
+                <div class="full-build-item" style="animation: slideIn 0.3s ease-out ${0.1 + i * 0.06}s both;">
+                  <span class="full-build-num">${i + 1}.</span>
+                  <span class="full-build-name">${item}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Reasoning -->
+          <div>
+            <div class="reasoning-label">
+              <span>💬</span>
+              <span>REASONING</span>
+            </div>
+            <p class="reasoning-text">${MOCK_SUGGESTION.reasoning}</p>
+          </div>
+
+          <!-- Tips -->
+          <div class="tips-box">
+            💡 ${MOCK_SUGGESTION.tips}
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderWaitingScreen() {
+  return `
+    <div class="waiting">
+      <div class="spinner-ring"></div>
+      <div style="text-align:center">
+        <div class="waiting-text">試合を検出中...</div>
+        <div class="waiting-sub" style="margin-top:8px">LoLクライアントを起動して試合を開始してください</div>
+      </div>
+      <div class="waiting-tip">
+        💡 ボーダーレスウィンドウモードでプレイすると、オーバーレイが正しく表示されます。<br>
+        LoL設定 → ビデオ → ウィンドウモード → ボーダーレス
+      </div>
+    </div>
+  `
+}
+
+// ── App State ──────────────────────────────────
+let currentView = 'ingame' // 'waiting' | 'ingame'
+
+function render() {
+  const root = document.getElementById('app-root')
+  const statusDotClass = currentView === 'ingame'
+    ? 'status-dot'
+    : 'status-dot" style="background:var(--gold);box-shadow:0 0 6px var(--gold)'
+
+  root.innerHTML = `
+    <div class="titlebar">
+      <div class="titlebar-left">
+        <div class="${statusDotClass}"></div>
+        <span class="titlebar-title">LOL BUILD ADVISOR</span>
+      </div>
+      <div class="titlebar-controls">
+        <button class="titlebar-btn" onclick="toggleView()" title="Toggle view">⇄</button>
+        <button class="titlebar-btn">⚙</button>
+        <button class="titlebar-btn">─</button>
+        <button class="titlebar-btn close">✕</button>
+      </div>
+    </div>
+    ${currentView === 'ingame' ? renderMainScreen() : renderWaitingScreen()}
+  `
+}
+
+function toggleView() {
+  currentView = currentView === 'ingame' ? 'waiting' : 'ingame'
+  render()
+}
+
+render()
+</script>
+</body>
+</html>

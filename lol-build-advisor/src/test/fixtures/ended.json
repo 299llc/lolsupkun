@@ -1,0 +1,119 @@
+{
+  "status": "ended",
+  "gameData": {
+    "gameData": { "gameTime": 1920 },
+    "activePlayer": { "summonerName": "TestPlayer" },
+    "players": {
+      "me": {
+        "summonerName": "TestPlayer",
+        "championName": "アッシュ",
+        "enName": "Ashe",
+        "championId": 22,
+        "team": "ORDER",
+        "position": "BOTTOM",
+        "level": 17,
+        "scores": { "kills": 8, "deaths": 4, "assists": 12 },
+        "items": [
+          { "itemID": 6672, "displayName": "クラーケン スレイヤー" },
+          { "itemID": 3085, "displayName": "ルナーン ハリケーン" },
+          { "itemID": 3031, "displayName": "インフィニティ エッジ" },
+          { "itemID": 3094, "displayName": "ラピッドファイアキャノン" },
+          { "itemID": 3006, "displayName": "バーサーカー ブーツ" },
+          { "itemID": 3026, "displayName": "ガーディアンエンジェル" }
+        ],
+        "flags": {}
+      },
+      "allies": [
+        {
+          "summonerName": "Ally1", "championName": "ガレン", "enName": "Garen", "championId": 86,
+          "team": "ORDER", "position": "TOP", "level": 17,
+          "scores": { "kills": 6, "deaths": 5, "assists": 8 },
+          "items": [],
+          "flags": {}
+        },
+        {
+          "summonerName": "Ally2", "championName": "リー・シン", "enName": "LeeSin", "championId": 64,
+          "team": "ORDER", "position": "JUNGLE", "level": 16,
+          "scores": { "kills": 7, "deaths": 5, "assists": 10 },
+          "items": [],
+          "flags": {}
+        },
+        {
+          "summonerName": "Ally3", "championName": "アーリ", "enName": "Ahri", "championId": 103,
+          "team": "ORDER", "position": "MIDDLE", "level": 17,
+          "scores": { "kills": 10, "deaths": 3, "assists": 9 },
+          "items": [],
+          "flags": {}
+        },
+        {
+          "summonerName": "Ally4", "championName": "スレッシュ", "enName": "Thresh", "championId": 412,
+          "team": "ORDER", "position": "UTILITY", "level": 14,
+          "scores": { "kills": 1, "deaths": 6, "assists": 20 },
+          "items": [],
+          "flags": {}
+        }
+      ],
+      "enemies": [
+        {
+          "summonerName": "Enemy1", "championName": "ダリウス", "enName": "Darius", "championId": 122,
+          "team": "CHAOS", "position": "TOP", "level": 17,
+          "scores": { "kills": 6, "deaths": 6, "assists": 5 },
+          "items": [],
+          "flags": {}
+        },
+        {
+          "summonerName": "Enemy2", "championName": "ヴィ", "enName": "Vi", "championId": 254,
+          "team": "CHAOS", "position": "JUNGLE", "level": 15,
+          "scores": { "kills": 4, "deaths": 7, "assists": 8 },
+          "items": [],
+          "flags": {}
+        },
+        {
+          "summonerName": "Enemy3", "championName": "ゼド", "enName": "Zed", "championId": 238,
+          "team": "CHAOS", "position": "MIDDLE", "level": 16,
+          "scores": { "kills": 8, "deaths": 6, "assists": 4 },
+          "items": [],
+          "flags": { "assassin": true }
+        },
+        {
+          "summonerName": "Enemy4", "championName": "ジンクス", "enName": "Jinx", "championId": 222,
+          "team": "CHAOS", "position": "BOTTOM", "level": 16,
+          "scores": { "kills": 5, "deaths": 7, "assists": 6 },
+          "items": [],
+          "flags": {}
+        },
+        {
+          "summonerName": "Enemy5", "championName": "ルル", "enName": "Lulu", "championId": 117,
+          "team": "CHAOS", "position": "UTILITY", "level": 13,
+          "scores": { "kills": 1, "deaths": 6, "assists": 12 },
+          "items": [],
+          "flags": {}
+        }
+      ]
+    },
+    "myTeamSide": "ORDER",
+    "ddragon": "https://ddragon.leagueoflegends.com/cdn/15.6.1",
+    "ended": true
+  },
+  "coaching": {
+    "overall_score": 7,
+    "build_score": 8,
+    "sections": [
+      { "title": "レーニング", "grade": "B", "content": "CS管理は序盤やや甘かったが、ポーク精度が高く有利をキープ。" },
+      { "title": "集団戦", "grade": "A", "content": "ポジショニング良好。デス4のうち2はゼドのフランクによるもので回避困難。" },
+      { "title": "ビルド判断", "grade": "A", "content": "ゼド対策のGA購入タイミングが適切。コアビルド完成も順調。" },
+      { "title": "マップ貢献", "grade": "B", "content": "ドラゴン前のビジョン設置が不足。Eの使用頻度を増やしたい。" }
+    ],
+    "good_points": [
+      "集団戦でのポジショニングが良く、デス数を抑えられた",
+      "アッシュultの精度が高く、エンゲージ起点として機能",
+      "ビルドパスが適切（GA購入でゼド対策）"
+    ],
+    "improve_points": [
+      "序盤のCSロスが多い（6分時点で10CS差）",
+      "ドラゴンファイト前のビジョン設置が不足",
+      "中盤のサイドレーンファームが少なく、金銭効率に改善余地"
+    ],
+    "next_game_advice": "序盤のCS精度向上を意識。W→CSの切り替えタイミングを練習し、6分で70CS以上を目標に。"
+  }
+}

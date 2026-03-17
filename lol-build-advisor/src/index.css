@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --color-lol-bg: #010A13;
+  --color-lol-surface: #0A1428;
+  --color-lol-surface-light: #0A1E32;
+  --color-lol-gold: #C8AA6E;
+  --color-lol-gold-dim: #785A28;
+  --color-lol-blue: #0AC8B9;
+  --color-lol-red: #E84057;
+  --color-lol-text: #A09B8C;
+  --color-lol-text-light: #F0E6D2;
+  --font-heading: 'Orbitron', sans-serif;
+  --font-body: 'Noto Sans JP', sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--color-lol-bg);
+  color: var(--color-lol-text-light);
+  font-family: var(--font-body);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* 横スクロール防止: 全要素がコンテナ幅を超えないようにする */
+*, *::before, *::after {
+  min-width: 0;
+}
+
+#root {
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* タイトルバーのドラッグ領域 */
+.drag-region {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* スクロールバー */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-lol-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-lol-gold-dim);
+  border-radius: 2px;
+}
