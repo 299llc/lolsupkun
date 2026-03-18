@@ -376,7 +376,7 @@ export function SettingsDialog({ onClose }) {
                           const known = AVAILABLE_MODELS.find(am => findInstalledModel([m], am))
                           return (
                             <option key={m.name} value={m.name}>
-                              {known ? `${known.label} (${known.size})` : `${m.name} (${(m.size / 1e9).toFixed(1)}GB)`}
+                              {known ? `${known.label} (${(m.size / 1e9).toFixed(1)}GB)` : `${m.name} (${(m.size / 1e9).toFixed(1)}GB)`}
                             </option>
                           )
                         })}
