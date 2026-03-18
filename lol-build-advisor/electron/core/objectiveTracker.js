@@ -30,6 +30,9 @@ function objectiveStatus(name, config, kills, gameTime) {
       return `${name}: 取得可能 (${kills.length}体討伐済み)`
     }
     const rem = Math.ceil(nextSpawn - gameTime)
+    if (rem <= 90) {
+      return `${name}: まもなくリスポーン（あと${formatTime(rem)}）→ 準備開始 (${kills.length}体討伐済み)`
+    }
     return `${name}: リスポーン待ち（あと${formatTime(rem)}）→ 対象外 (${kills.length}体討伐済み)`
   }
 
@@ -38,6 +41,9 @@ function objectiveStatus(name, config, kills, gameTime) {
     return `${name}: 取得可能 (討伐状況不明)`
   }
   const rem = Math.ceil(firstSpawn - gameTime)
+  if (rem <= 90) {
+    return `${name}: まもなくスポーン（あと${formatTime(rem)}）→ 準備開始`
+  }
   return `${name}: 未出現（スポーンまで${formatTime(rem)}）→ 対象外`
 }
 
@@ -88,7 +94,7 @@ function buildMacroDynamicContext(gameData, me, allies, enemies) {
     objectiveStatus('バロン', OBJECTIVES.baron, baron, gameTime),
     objectiveStatus('ヴォイドグラブ', OBJECTIVES.voidgrub, voidgrub, gameTime),
     objectiveStatus('ヘラルド', OBJECTIVES.herald, herald, gameTime),
-  ].filter(line => !line.includes('終了'))
+  ].filter(line => !line.includes('終了') && !line.includes('対象外'))
 
   const lines = [
     `【時間】${minutes}分 (${phase})`,
