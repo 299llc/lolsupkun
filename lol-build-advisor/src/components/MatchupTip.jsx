@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { Swords, ChevronDown, ChevronUp, AlertTriangle, Zap, Crosshair } from 'lucide-react'
 
-export function MatchupTip({ tip }) {
-  const [expanded, setExpanded] = useState(true)
+export function MatchupTip({ tip, laningOver = false }) {
+  const [manualToggle, setManualToggle] = useState(null)
+  const expanded = manualToggle !== null ? manualToggle : !laningOver
 
   if (!tip) return null
 
   return (
     <div className="rounded bg-lol-surface-light/50 border border-lol-blue/30 overflow-hidden">
       <button
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => setManualToggle(!expanded)}
         className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-lol-surface-light/30 transition-colors"
       >
         <Swords size={14} className="text-lol-blue shrink-0" />

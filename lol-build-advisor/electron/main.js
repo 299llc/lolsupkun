@@ -682,13 +682,15 @@ async function requestCoaching(snapshot) {
   const isLocal = state.claudeClient?.isLocalLLM?.()
 
   const lines = [
-    // 参照データを先に配置（モデルが最後の内容に注目するため、辞書で終わらせない）
-    `【参照: チャンピオンスキル情報】`,
-    ...champSkillLines,
-    '',
-    `【参照: アイテム辞書】`,
-    ...itemDictLines,
-    '',
+    // ローカルLLMでは参照データを省略（コンテキストが大きすぎるとフォーマット指示を忘れる）
+    ...(!isLocal ? [
+      `【参照: チャンピオンスキル情報】`,
+      ...champSkillLines,
+      '',
+      `【参照: アイテム辞書】`,
+      ...itemDictLines,
+      '',
+    ] : []),
     `=== 以下の試合データを評価してください ===`,
     `試合時間: ${minutes}分`,
     '',
@@ -1368,7 +1370,26 @@ function handleMatchupTip(me, resolvedPosition, enemies) {
 
   state.matchupTipLoaded = true
   console.log(`[MatchupTip] Requesting: ${me.enName} vs ${laneOpponent.enName} (${resolvedPosition})`)
-  const tipContext = `自分: ${me.championName} (${resolvedPosition})\n対面: ${laneOpponent.championName} (${laneOpponent.enName})`
+
+  // ローカルLLM向け: スキル情報を追加してハルシネーション防止
+  const skillLines = []
+  if (state.claudeClient?.isLocalLLM?.()) {
+    for (const champ of [me, laneOpponent]) {
+      const spells = getSpells(champ.enName)
+      if (spells) {
+        const passive = `パッシブ:${spells.passive.name}`
+        const skills = spells.spells.map(s => `${s.key}:${s.name}(${s.desc.substring(0, 60)})`).join(' ')
+        skillLines.push(`【${champ.championName}のスキル】${passive} ${skills}`)
+      }
+    }
+  }
+
+  const tipContext = [
+    ...skillLines,
+    '',
+    `自分: ${me.championName} (${resolvedPosition})`,
+    `対面: ${laneOpponent.championName} (${laneOpponent.enName})`
+  ].join('\n')
   state.claudeClient.getMatchupTip(tipContext).then(tip => {
     if (tip) {
       tip.opponent = laneOpponent.championName

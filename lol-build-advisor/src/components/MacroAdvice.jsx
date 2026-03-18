@@ -51,6 +51,23 @@ export function MacroAdvice({ advice, loading }) {
             </div>
           </div>
 
+          {/* 理由 */}
+          {advice.reason && (
+            <p className="text-xs text-lol-text/70 px-2">💡 {advice.reason}</p>
+          )}
+
+          {/* ステップ */}
+          {advice.steps?.length > 0 && (
+            <ol className="flex flex-col gap-0.5 px-2">
+              {advice.steps.map((s, i) => (
+                <li key={i} className="flex items-start gap-1.5 text-xs text-lol-text-light">
+                  <span className="text-lol-blue shrink-0 font-medium">{i + 1}.</span>
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+
           {/* 警告 */}
           {advice.warning && (
             <div className="flex items-start gap-1.5 px-2 py-1 rounded bg-lol-red/5 border border-lol-red/15">

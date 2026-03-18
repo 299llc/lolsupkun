@@ -1,30 +1,94 @@
 import { GraduationCap, Loader2, TrendingUp, TrendingDown, ChevronRight } from 'lucide-react'
 
+// グレード → 棒グラフ幅% & SVG色
+const GRADE_BAR = {
+  S: { pct: 100, color: '#C8AA6E', bg: 'bg-lol-gold/15' },    // gold
+  A: { pct: 80,  color: '#4ade80', bg: 'bg-green-400/10' },    // green
+  B: { pct: 60,  color: '#0AC8B9', bg: 'bg-lol-blue/10' },     // blue
+  C: { pct: 40,  color: '#facc15', bg: 'bg-yellow-400/10' },    // yellow
+  D: { pct: 20,  color: '#E84057', bg: 'bg-lol-red/10' },       // red
+}
+
 const GRADE_COLORS = {
-  S: 'text-lol-gold bg-lol-gold/15 border-lol-gold/40',
-  A: 'text-green-400 bg-green-400/10 border-green-400/30',
-  B: 'text-lol-blue bg-lol-blue/10 border-lol-blue/30',
-  C: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30',
-  D: 'text-lol-red bg-lol-red/10 border-lol-red/30',
+  S: 'text-lol-gold',
+  A: 'text-green-400',
+  B: 'text-lol-blue',
+  C: 'text-yellow-400',
+  D: 'text-lol-red',
 }
 
 function getScoreInfo(score) {
-  if (score >= 9) return { color: 'text-lol-gold', bg: 'bg-lol-gold/10 border-lol-gold/30', label: '素晴らしい' }
-  if (score >= 7) return { color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/30', label: '良い' }
-  if (score >= 5) return { color: 'text-yellow-400', bg: 'bg-yellow-400/10 border-yellow-400/30', label: '普通' }
-  if (score >= 3) return { color: 'text-orange-400', bg: 'bg-orange-400/10 border-orange-400/30', label: '改善必要' }
-  return { color: 'text-lol-red', bg: 'bg-lol-red/10 border-lol-red/30', label: '要練習' }
+  if (score >= 9) return { color: '#C8AA6E', textClass: 'text-lol-gold', label: '素晴らしい' }
+  if (score >= 7) return { color: '#4ade80', textClass: 'text-green-400', label: '良い' }
+  if (score >= 5) return { color: '#facc15', textClass: 'text-yellow-400', label: '普通' }
+  if (score >= 3) return { color: '#fb923c', textClass: 'text-orange-400', label: '改善必要' }
+  return { color: '#E84057', textClass: 'text-lol-red', label: '要練習' }
 }
 
-function ScoreCircle({ score, label }) {
+// SVGドーナツチャート
+function DonutScore({ score, label }) {
   const info = getScoreInfo(score)
+  const size = 72
+  const stroke = 6
+  const radius = (size - stroke) / 2
+  const circumference = 2 * Math.PI * radius
+  const pct = Math.min(score / 10, 1)
+  const dasharray = `${circumference * pct} ${circumference * (1 - pct)}`
+
   return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 rounded border ${info.bg}`}>
-      <div className={`text-2xl font-heading font-bold ${info.color}`}>{score}</div>
-      <div className="flex flex-col">
-        <div className="text-[10px] text-lol-text">{label}</div>
-        <div className={`text-[10px] font-medium ${info.color}`}>{info.label}</div>
+    <div className="flex flex-col items-center gap-1">
+      <svg width={size} height={size} className="-rotate-90">
+        {/* 背景リング */}
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke="currentColor" strokeWidth={stroke}
+          className="text-lol-surface-light/30"
+        />
+        {/* スコアアーク */}
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke={info.color} strokeWidth={stroke}
+          strokeDasharray={dasharray}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dasharray 0.6s ease' }}
+        />
+      </svg>
+      {/* 中央テキスト（SVGの上にオーバーレイ） */}
+      <div className="absolute flex flex-col items-center justify-center" style={{ width: size, height: size }}>
+        <span className={`text-xl font-heading font-bold ${info.textClass}`}>{score}</span>
+        <span className="text-[9px] text-lol-text/60">/10</span>
       </div>
+      <div className="flex flex-col items-center">
+        <span className="text-[10px] text-lol-text">{label}</span>
+        <span className={`text-[10px] font-medium ${info.textClass}`}>{info.label}</span>
+      </div>
+    </div>
+  )
+}
+
+// 横棒グラフ付きセクション
+function GradeBar({ section }) {
+  const bar = GRADE_BAR[section.grade] || GRADE_BAR.C
+  const gradeColor = GRADE_COLORS[section.grade] || GRADE_COLORS.C
+
+  return (
+    <div className="rounded bg-lol-surface-light/30 border border-lol-surface-light/20 overflow-hidden">
+      <div className="flex items-center gap-2 px-2 py-1">
+        <span className="text-xs text-lol-text-light font-medium flex-1">{section.title}</span>
+        <span className={`text-xs font-heading font-bold ${gradeColor}`}>{section.grade}</span>
+      </div>
+      {/* 棒グラフ */}
+      <div className="mx-2 mb-1 h-1.5 rounded-full bg-lol-surface-light/20 overflow-hidden">
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${bar.pct}%`,
+            backgroundColor: bar.color,
+            transition: 'width 0.6s ease',
+          }}
+        />
+      </div>
+      <p className="text-xs text-lol-text px-2 pb-1.5 leading-relaxed">{section.content}</p>
     </div>
   )
 }
@@ -60,25 +124,19 @@ export function CoachingPanel({ coaching, loading }) {
       </div>
 
       <div className="p-2 space-y-2">
-        {/* スコア */}
-        <div className="flex justify-center gap-6 py-1">
-          <ScoreCircle score={coaching.overall_score} label="総合" />
-          <ScoreCircle score={coaching.build_score} label="ビルド" />
+        {/* ドーナツスコア */}
+        <div className="flex justify-center gap-8 py-2">
+          <div className="relative">
+            <DonutScore score={coaching.overall_score} label="総合" />
+          </div>
+          <div className="relative">
+            <DonutScore score={coaching.build_score} label="ビルド" />
+          </div>
         </div>
 
-        {/* セクション */}
+        {/* セクション（横棒グラフ付き） */}
         {coaching.sections?.map((section, i) => (
-          <div key={i} className="rounded bg-lol-surface-light/30 border border-lol-surface-light/20">
-            <div className="flex items-center justify-between px-2 py-1">
-              <span className="text-xs text-lol-text-light font-medium">{section.title}</span>
-              {section.grade && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded border font-heading ${GRADE_COLORS[section.grade] || GRADE_COLORS.C}`}>
-                  {section.grade}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-lol-text px-2 pb-1.5 leading-relaxed">{section.content}</p>
-          </div>
+          <GradeBar key={i} section={section} />
         ))}
 
         {/* 良かった点 */}

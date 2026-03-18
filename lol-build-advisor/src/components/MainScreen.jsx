@@ -8,7 +8,6 @@ import { MatchupTip } from './MatchupTip'
 import { MacroAdvice } from './MacroAdvice'
 import { RuleAlerts } from './RuleAlerts'
 import { Clock, Eye, MapPin, Loader2, AlertTriangle, Target } from 'lucide-react'
-import { AdBanner } from './AdBanner'
 
 const POSITIONS = [
   { value: 'TOP', label: 'TOP' },
@@ -177,7 +176,6 @@ export function MainScreen({ data, coreBuild, aiSuggestion, aiLoading, positionS
           </div>
         </div>
         {/* 試合終了後の広告 */}
-        <AdBanner className="mt-2" />
       </div>
     )
   }
@@ -212,8 +210,8 @@ export function MainScreen({ data, coreBuild, aiSuggestion, aiLoading, positionS
 
       {/* ===== 右カラム: AI情報 ===== */}
       <div className="flex flex-col gap-1.5 overflow-y-auto overflow-x-hidden min-w-0">
-        {/* 対面アドバイス */}
-        {matchupTip && <MatchupTip tip={matchupTip} />}
+        {/* 対面アドバイス（レーン戦終了後は自動折りたたみ） */}
+        {matchupTip && <MatchupTip tip={matchupTip} laningOver={gameTime >= 900} />}
 
         {/* ビルドパネル */}
         <BuildPanel

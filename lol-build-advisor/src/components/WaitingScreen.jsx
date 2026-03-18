@@ -1,5 +1,4 @@
 import { Swords } from 'lucide-react'
-import { AdBanner } from './AdBanner'
 
 export function WaitingScreen() {
   return (
@@ -25,8 +24,6 @@ export function WaitingScreen() {
         </p>
       </div>
 
-      {/* 広告バナー */}
-      <AdBanner className="mt-4 w-full max-w-xs" />
     </div>
   )
 }

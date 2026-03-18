@@ -7,7 +7,7 @@
  * プロバイダー抽象化: AnthropicProvider (BYOK) / BedrockProvider (AWS) / OllamaProvider (ローカルLLM) を切り替え可能
  */
 const { ITEM_PROMPT, MATCHUP_PROMPT, MACRO_PROMPT, COACHING_PROMPT } = require('../core/prompts')
-const { LOCAL_ITEM_PROMPT, LOCAL_MATCHUP_PROMPT, LOCAL_MACRO_PROMPT, LOCAL_COACHING_PROMPT } = require('../core/localPrompts')
+const { LOCAL_ITEM_PROMPT, LOCAL_MATCHUP_PROMPT, LOCAL_MACRO_PROMPT, LOCAL_COACHING_STEP1_PROMPT, LOCAL_COACHING_STEP2_PROMPT } = require('../core/localPrompts')
 const { buildKnowledgeContext } = require('../core/knowledgeDb')
 const { AnthropicProvider } = require('./providers/anthropicProvider')
 
@@ -60,7 +60,7 @@ class ClaudeApiClient {
   }
 
   // 共通API呼び出し (プロバイダー経由)
-  async _callApi({ model, maxTokens, temperature = 0, system, messages, timeoutMs, logType }) {
+  async _callApi({ model, maxTokens, temperature = 0, system, messages, timeoutMs, logType, rawText: returnRawText = false }) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), timeoutMs)
     const startTime = Date.now()
@@ -99,6 +99,12 @@ class ClaudeApiClient {
 
       if (result.stopReason === 'max_tokens') {
         console.warn(`[AI:${logType}] Output truncated (max_tokens reached)`)
+      }
+
+      // rawTextモード: JSON解析せずテキストをそのまま返す（2段階コーチング用）
+      if (returnRawText) {
+        this._pushLog(logEntry)
+        return text
       }
 
       const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -279,13 +285,43 @@ class ClaudeApiClient {
 
   async getCoaching(gameContext) {
     const isLocal = this.isLocalLLM()
+
+    if (isLocal) {
+      // 2段階コーチング: Step1 自由文で分析 → Step2 JSON化
+      console.log('[Coaching] Step1: 自由文分析...')
+      const analysis = await this._callApi({
+        model: MODEL_HAIKU,
+        maxTokens: 1500,
+        temperature: 0.7,
+        system: LOCAL_COACHING_STEP1_PROMPT,
+        messages: [{ role: 'user', content: gameContext }],
+        timeoutMs: 120000,
+        logType: 'coaching-step1',
+        rawText: true
+      })
+
+      if (!analysis) return null
+      console.log(`[Coaching] Step1 result (${analysis.length} chars): ${analysis.substring(0, 200)}`)
+
+      console.log('[Coaching] Step2: JSON化...')
+      return this._callApi({
+        model: MODEL_HAIKU,
+        maxTokens: 800,
+        temperature: 0,
+        system: LOCAL_COACHING_STEP2_PROMPT,
+        messages: [{ role: 'user', content: analysis }],
+        timeoutMs: 60000,
+        logType: 'coaching-step2'
+      })
+    }
+
     return this._callApi({
-      model: isLocal ? MODEL_HAIKU : MODEL_HAIKU,
-      maxTokens: isLocal ? 2000 : 4000,
-      temperature: isLocal ? 0.7 : 0,
-      system: isLocal ? LOCAL_COACHING_PROMPT : COACHING_PROMPT,
+      model: MODEL_HAIKU,
+      maxTokens: 4000,
+      temperature: 0,
+      system: COACHING_PROMPT,
       messages: [{ role: 'user', content: gameContext }],
-      timeoutMs: isLocal ? 120000 : 60000,
+      timeoutMs: 60000,
       logType: 'coaching'
     })
   }
