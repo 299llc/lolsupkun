@@ -98,9 +98,18 @@ function analyzeTeamComp(team) {
   return { picked, tagCount, adChamps, apChamps, traits, warnings }
 }
 
-function TeamMember({ member }) {
+function TeamMember({ member, ddragon }) {
+  const ddBase = ddragon || DDRAGON_FALLBACK
   return (
     <div className="flex items-center gap-2 px-2 py-1 rounded bg-lol-surface-light/30">
+      {member.enName && member.enName !== 'Unknown' && (
+        <img
+          src={`${ddBase}/img/champion/${member.enName}.png`}
+          alt={member.jaName}
+          className="w-6 h-6 rounded"
+          onError={(e) => { e.target.style.display = 'none' }}
+        />
+      )}
       <span className={`text-sm flex-1 ${member.isMe ? 'text-lol-gold font-medium' : 'text-lol-text-light'}`}>
         {member.jaName}
       </span>
@@ -184,16 +193,38 @@ function SkillOrderGrid({ tree }) {
 
 export function ChampSelectScreen({ suggestion, aiLoading, ddragon, team, extras }) {
   const analysis = analyzeTeamComp(team)
+  const me = team?.find(m => m.isMe)
+  const ddBase = ddragon || DDRAGON_FALLBACK
 
   return (
     <div className="flex flex-col gap-3 p-3">
-      <div className="text-center py-2 px-3 rounded bg-lol-blue/10 border border-lol-blue/30">
+      <div className="py-2 px-3 rounded bg-lol-blue/10 border border-lol-blue/30">
         <div className="flex items-center justify-center gap-2">
           <Swords size={16} className="text-lol-blue" />
           <span className="font-heading text-[13px] text-lol-blue tracking-wider">
             CHAMPION SELECT
           </span>
         </div>
+        {me && me.enName !== 'Unknown' && (
+          <div className="flex items-center justify-center gap-3 mt-2">
+            <img
+              src={`${ddBase}/img/champion/${me.enName}.png`}
+              alt={me.jaName}
+              className="w-12 h-12 rounded-lg border-2 border-lol-gold/50"
+              onError={(e) => { e.target.style.display = 'none' }}
+            />
+            <div>
+              <div className="text-sm font-medium text-lol-gold">{me.jaName}</div>
+              <div className="flex gap-1 mt-0.5">
+                {me.tags?.map(tag => (
+                  <span key={tag} className={`text-[10px] ${TAG_COLORS[tag] || 'text-lol-text'}`}>
+                    {TAG_LABELS[tag] || tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* おすすめスペル・スキルオーダー */}
@@ -299,7 +330,7 @@ export function ChampSelectScreen({ suggestion, aiLoading, ddragon, team, extras
             {/* メンバー一覧 */}
             <div className="space-y-0.5">
               {analysis.picked.map(m => (
-                <TeamMember key={m.championId} member={m} />
+                <TeamMember key={m.championId} member={m} ddragon={ddragon} />
               ))}
             </div>
 

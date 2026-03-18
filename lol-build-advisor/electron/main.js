@@ -14,6 +14,7 @@ const { LcuClient } = require('./api/lcuClient')
 const { detectFlags } = require('./core/championAnalysis')
 const { RuleEngine } = require('./core/ruleEngine')
 const { buildMacroStaticContext, buildMacroDynamicContext, getObjectivesSummary, getObjectiveTimers } = require('./core/objectiveTracker')
+const { buildMatchChampionKnowledge } = require('./core/knowledgeDb')
 const { MACRO_INTERVAL_MS, MACRO_DEBOUNCE_MS, COUNTER_ITEMS, ITEM_COMPLETE_GOLD, ITEM_BOOT_GOLD, DEFAULT_WINDOW, DDRAGON_BASE, POLL_INTERVAL_MS, isCompletedItem, classifyObjectiveEvents } = require('./core/config')
 const { SessionRecorder } = require('./core/sessionRecorder')
 const { GameLogger } = require('./core/gameLogger')
@@ -1090,7 +1091,37 @@ async function handleGameData(gameData) {
   if (!state.spellsLoadedForGame) {
     state.spellsLoadedForGame = true
     const names = allPlayers.map(p => p.enName).filter(Boolean)
-    loadSpellsForMatch(names).catch(() => {})
+    loadSpellsForMatch(names).then(spellData => {
+      // 10体のチャンプ教科書を生成（試合中キャッシュ）
+      if (state.claudeClient?.isLocalLLM?.()) {
+        try {
+          const allyTeam = allPlayers.filter(p => p.team === 'ORDER').map(p => ({
+            championName: p.championName, enName: p.enName,
+            position: p.position, tags: getChampionById(p.rawChampionName ? undefined : 0).tags || [],
+            stats: {},
+          }))
+          const enemyTeam = allPlayers.filter(p => p.team === 'CHAOS').map(p => ({
+            championName: p.championName, enName: p.enName,
+            position: p.position, tags: [],
+            stats: {},
+          }))
+          // championIdが取れないのでenNameからpatchDataで取得
+          for (const p of [...allyTeam, ...enemyTeam]) {
+            const champInfo = Object.values(require('./api/patchData').getAllChampions() || {})
+              .find(c => c.enName === p.enName)
+            if (champInfo) {
+              p.tags = champInfo.tags || []
+              p.stats = champInfo.stats || {}
+            }
+          }
+          const knowledge = buildMatchChampionKnowledge(allyTeam, enemyTeam, spellData || {})
+          state.claudeClient.setChampionKnowledge(knowledge)
+          console.log(`[MatchKnowledge] Generated champion textbook (${knowledge.length} chars, ${allyTeam.length + enemyTeam.length} champs)`)
+        } catch (err) {
+          console.error(`[MatchKnowledge] Error: ${err.message}`)
+        }
+      }
+    }).catch(() => {})
     // ゲームログ記録開始
     if (!gameLogger.isActive()) gameLogger.startGame()
   }
@@ -1276,12 +1307,6 @@ async function handleGameData(gameData) {
 
   if (state.lastGameStatus !== 'ingame') {
     broadcast('game:status', 'ingame')
-    // 試合開始検知 → ウィンドウを1回だけ前面に出す（常時最前面にはしない）
-    if (state.mainWindow && !state.mainWindow.isDestroyed()) {
-      state.mainWindow.show()
-      state.mainWindow.moveTop()
-      state.mainWindow.focus()
-    }
   }
   broadcast('game:data', snapshot)
 }

@@ -171,24 +171,25 @@ function CompactMatchup({ tip }) {
   )
 }
 
-export function CompactView({ status, gameData, coreBuild, aiSuggestion, aiLoading, substituteItems, macroAdvice, macroLoading, champSelectExtras, matchupTip }) {
+export function CompactView({ status, gameData, coreBuild, aiSuggestion, aiLoading, substituteItems, macroAdvice, macroLoading, champSelectExtras, matchupTip, embedded = false }) {
   const ddragon = gameData?.ddragon
   const me = gameData?.players?.me
   const ownedItemIds = new Set((me?.items || []).map(i => String(i.itemID)))
   const isIngame = status === 'ingame' || status === 'ended'
   const isChampSelect = status === 'champselect'
 
-  // body/html の背景を透明にしてウィンドウ透過を有効にする
+  // Electron専用: body/html の背景を透明にしてウィンドウ透過を有効にする
   useEffect(() => {
+    if (embedded) return // ブラウザプレビュー時は変更しない
     document.documentElement.style.background = 'transparent'
     document.body.style.background = 'transparent'
-  }, [])
+  }, [embedded])
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden rounded-lg" style={{ background: 'rgba(1, 10, 19, 0.75)' }}>
-      <CompactTitleBar status={status} />
+    <div className={`${embedded ? 'h-full' : 'h-screen'} flex flex-col overflow-hidden rounded-lg`} style={{ background: 'rgba(1, 10, 19, 0.75)' }}>
+      {!embedded && <CompactTitleBar status={status} />}
 
-      <div className="flex-1 overflow-y-auto px-3 pb-2 space-y-2.5">
+      <div className="flex-1 overflow-y-auto px-3 pt-2 pb-2 space-y-2.5">
         {isIngame ? (
           <>
             <CompactItems

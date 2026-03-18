@@ -13,7 +13,7 @@ const {
   LOCAL_MACRO_STEP1_PROMPT, LOCAL_MACRO_STEP2_PROMPT,
   LOCAL_COACHING_STEP1_PROMPT, LOCAL_COACHING_STEP2_PROMPT,
 } = require('../core/localPrompts')
-const { buildKnowledgeContext } = require('../core/knowledgeDb')
+const { buildKnowledgeContext, buildMacroKnowledge } = require('../core/knowledgeDb')
 const { AnthropicProvider } = require('./providers/anthropicProvider')
 
 const MODEL_HAIKU = 'claude-haiku-4-5-20251001'
@@ -40,11 +40,14 @@ class ClaudeApiClient {
     // ローカルLLM用: ポジション情報
     this.position = null
     this.gameTimeSec = 0
+    // 試合開始時に生成する10体のチャンプ教科書（試合中キャッシュ）
+    this.championKnowledge = null
   }
 
   setCoreBuild(coreBuild) { this.coreBuild = coreBuild }
   setSubstituteItems(items) { this.substituteItems = items || [] }
   setMatchContext(staticContext) { this.matchContext = staticContext }
+  setChampionKnowledge(knowledge) { this.championKnowledge = knowledge }
   setPosition(position) { this.position = position }
   setGameTime(sec) { this.gameTimeSec = sec }
   getSubstituteItems() { return this.substituteItems }
@@ -62,6 +65,8 @@ class ClaudeApiClient {
     this.totalCalls = 0
     this.position = null
     this.gameTimeSec = 0
+    this.championKnowledge = null
+    this._step1Cache = {}  // Step1キャッシュクリア
   }
 
   // 共通API呼び出し (プロバイダー経由)
@@ -152,16 +157,35 @@ class ClaudeApiClient {
   }
 
   /**
-   * ローカルLLM 2段階呼び出しヘルパー
+   * ローカルLLM 2段階呼び出しヘルパー（Step1キャッシュ付き）
    * Step1: 自由文で分析（format制約なし）→ Step2: JSON化（format:'json'）
+   * ゲーム状態が大きく変わっていなければStep1をスキップしてStep2のみ実行
    */
   async _twoStepLocal({ step1System, step2System, messages, step1MaxTokens = 500, step2MaxTokens = 300, logPrefix, timeoutMs = 60000 }) {
-    const analysis = await this._callApi({
-      model: MODEL_HAIKU, maxTokens: step1MaxTokens, temperature: 0.7,
-      system: step1System, messages,
-      timeoutMs, logType: `${logPrefix}-step1`, rawText: true
-    })
-    if (!analysis) return null
+    // Step1キャッシュ: userMessageのハッシュ的な短縮キーで判定
+    const userMsg = messages[messages.length - 1]?.content || ''
+    // キル差・レベル・オブジェクト状態を含む短いキーを生成
+    const cacheKey = `${logPrefix}:${userMsg.length}:${userMsg.substring(0, 200)}`
+    const cached = this._step1Cache?.[logPrefix]
+
+    let analysis
+    if (cached && cached.key === cacheKey) {
+      // 状態変化なし → Step1スキップ
+      analysis = cached.result
+      console.log(`[AI:${logPrefix}] Step1 cache hit (skipping Step1)`)
+    } else {
+      // Step1実行
+      analysis = await this._callApi({
+        model: MODEL_HAIKU, maxTokens: step1MaxTokens, temperature: 0.7,
+        system: step1System, messages,
+        timeoutMs, logType: `${logPrefix}-step1`, rawText: true
+      })
+      if (!analysis) return null
+      // キャッシュ保存
+      if (!this._step1Cache) this._step1Cache = {}
+      this._step1Cache[logPrefix] = { key: cacheKey, result: analysis }
+    }
+
     return this._callApi({
       model: MODEL_HAIKU, maxTokens: step2MaxTokens, temperature: 0.3,
       system: step2System,
@@ -298,8 +322,13 @@ class ClaudeApiClient {
       const parts = []
       if (staticContext) parts.push(staticContext)
       if (isLocal) {
-        const knowledge = buildKnowledgeContext(this.position || 'MID', this.gameTimeSec)
-        if (knowledge) parts.push(knowledge)
+        // 10体のチャンプ教科書（試合開始時に1回生成、キャッシュ済み）
+        if (this.championKnowledge) parts.push(this.championKnowledge)
+        // キル差を動的コンテキストから抽出して教科書知識を選択
+        const killDiffMatch = dynamicContext.match(/\(([+-]?\d+)\)/)
+        const killDiff = killDiffMatch ? parseInt(killDiffMatch[1]) : 0
+        const macroKnowledge = buildMacroKnowledge(this.position || 'MID', this.gameTimeSec, killDiff)
+        if (macroKnowledge) parts.push(macroKnowledge)
       }
       parts.push(dynamicContext)
       messages.push({ role: 'user', content: parts.join('\n\n') })
@@ -308,7 +337,7 @@ class ClaudeApiClient {
     if (isLocal) {
       return this._twoStepLocal({
         step1System: LOCAL_MACRO_STEP1_PROMPT, step2System: LOCAL_MACRO_STEP2_PROMPT,
-        messages, step1MaxTokens: 400, step2MaxTokens: 300, logPrefix: 'macro'
+        messages, step1MaxTokens: 600, step2MaxTokens: 300, logPrefix: 'macro'
       })
     }
 
