@@ -808,7 +808,19 @@ function buildMacroKnowledge(position, gameTimeSec, killDiff, rank) {
   addSection('勝利条件の判断基準', MACRO_TEXTBOOK.winConditions)
 
   // ── 状況に応じた戦略を選択 ──
-  if (killDiff <= -3) {
+  if (killDiff <= -10) {
+    // 大幅劣勢: 最優先で安全な行動を指示
+    lines.push('')
+    lines.push('【⚠️ 大幅劣勢 — 最重要ルール】')
+    lines.push('- デスしないことが最優先。1デスが敵のバロン・インヒビに直結する')
+    lines.push('- 集団戦・オブジェクト争奪は絶対に仕掛けない。敵がミスするまで耐える')
+    lines.push('- タワー下でファームし、ウェーブを安全に処理する')
+    lines.push('- 1人で敵の視界に入らない。必ず味方と行動する')
+    lines.push('- 唯一の勝ち筋はキャッチ（敵の孤立した1人を捕まえる）')
+    lines.push('')
+    addSection('劣勢時の戦い方', MACRO_TEXTBOOK.playingFromBehind)
+    addSection('カムバックゴールド', MACRO_TEXTBOOK.comebackGoldMechanics)
+  } else if (killDiff <= -3) {
     addSection('劣勢時の戦い方', MACRO_TEXTBOOK.playingFromBehind)
   } else if (killDiff >= 5) {
     addSection('優勢時の畳み方', MACRO_TEXTBOOK.closingOutGames)
