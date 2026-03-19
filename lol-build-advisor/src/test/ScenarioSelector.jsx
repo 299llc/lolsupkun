@@ -199,18 +199,20 @@ export function ScenarioSelector() {
 
   if (collapsed) {
     return (
-      <button
-        onClick={() => setCollapsed(false)}
-        className="fixed top-0 right-0 z-[9999] px-2 py-1 text-[10px] bg-purple-600 text-white rounded-bl"
-        data-testid="scenario-toggle"
-      >
-        TEST
-      </button>
+      <div className="bg-purple-900/95 px-2 py-1 flex justify-end shrink-0">
+        <button
+          onClick={() => setCollapsed(false)}
+          className="px-2 py-0.5 text-[10px] bg-purple-600 text-white rounded"
+          data-testid="scenario-toggle"
+        >
+          TEST
+        </button>
+      </div>
     )
   }
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[9999] bg-purple-900/95 border-b-2 border-purple-400 px-3 py-2" data-testid="scenario-panel">
+    <div className="bg-purple-900/95 border-b-2 border-purple-400 px-3 py-2 shrink-0" data-testid="scenario-panel">
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-[11px] text-purple-300 font-bold shrink-0">SCENARIO:</span>
         {scenarios.map(name => (

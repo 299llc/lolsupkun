@@ -22,9 +22,9 @@ function renderApp(withTestUI) {
     import('./test/ScenarioSelector.jsx').then(({ ScenarioSelector }) => {
       root.render(
         <React.StrictMode>
-          <div className="relative">
+          <div className="flex flex-col h-screen">
             <ScenarioSelector />
-            <div style={{ paddingTop: '36px' }}>
+            <div className="flex-1 min-h-0">
               <App />
             </div>
           </div>

@@ -120,9 +120,9 @@ function ObjectivesPanel({ objectives }) {
         <span className="font-heading text-[10px] text-lol-gold tracking-wider">OBJECTIVES</span>
         <span className="text-[10px] text-lol-text/50 ml-auto">{Math.floor(objectives.gameTime / 60)}:{String(objectives.gameTime % 60).padStart(2, '0')}</span>
       </div>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+      <div className="flex flex-col gap-0.5">
         {items.map(({ key, label }) => (
-          <span key={key} className={`text-[10px] leading-tight ${label.includes('取得可能') ? 'text-lol-accent' : label.includes('討伐') ? 'text-lol-text/60' : 'text-lol-text-light'}`}>
+          <span key={key} className={`text-[10px] leading-tight ${label.includes('取得可能') ? 'text-lol-accent' : label.includes('終了') ? 'text-lol-text/30' : label.includes('対象外') ? 'text-lol-text/50' : 'text-lol-text-light'}`}>
             {label}
           </span>
         ))}

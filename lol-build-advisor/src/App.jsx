@@ -14,8 +14,12 @@ export default function App() {
   const { status, gameData, coreBuild, aiSuggestion, aiLoading, positionSelectChamp, substituteItems, champSelectTeam, coaching, coachingLoading, substituteError, matchupTip, champSelectExtras, macroAdvice, macroLoading, objectivesStatus, ruleAlerts } = useGameData()
   const [showSettings, setShowSettings] = useState(false)
   const [showDebug, setShowDebug] = useState(false)
+  const [showOverlayPreview, setShowOverlayPreview] = useState(false)
   const [isDev, setIsDev] = useState(false)
   const [compactOpen, setCompactOpen] = useState(false)
+  // Electron環境判定: preload.jsにはopenCompactViewがあるがmockAPIにもある
+  // → __ELECTRON__ グローバルフラグで判定（Electron main processが設定する）
+  const isElectron = !!window.__ELECTRON__
 
   useEffect(() => {
     window.electronAPI?.isDev().then(v => setIsDev(!!v))
@@ -49,7 +53,13 @@ export default function App() {
         onSettings={() => setShowSettings(true)}
         onDebug={isDev ? () => setShowDebug(true) : null}
         compactOpen={compactOpen}
-        onCompactView={() => window.electronAPI?.toggleCompactView()}
+        onCompactView={() => {
+          if (isElectron) {
+            window.electronAPI.toggleCompactView()
+          } else {
+            setShowOverlayPreview(v => !v)
+          }
+        }}
       />
 
       <div className="flex-1 overflow-hidden">
@@ -82,6 +92,26 @@ export default function App() {
       )}
       {showDebug && (
         <DebugPanel onClose={() => setShowDebug(false)} />
+      )}
+      {/* ブラウザ用オーバーレイプレビュー */}
+      {showOverlayPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end pr-4 bg-black/60" onClick={() => setShowOverlayPreview(false)}>
+          <div className="w-[300px] h-[70vh] max-h-[550px] rounded-lg overflow-hidden shadow-2xl border border-lol-gold/20" onClick={e => e.stopPropagation()}>
+            <CompactView
+              status={status}
+              gameData={gameData}
+              coreBuild={coreBuild}
+              aiSuggestion={aiSuggestion}
+              aiLoading={aiLoading}
+              substituteItems={substituteItems}
+              macroAdvice={macroAdvice}
+              macroLoading={macroLoading}
+              champSelectExtras={champSelectExtras}
+              matchupTip={matchupTip}
+              embedded
+            />
+          </div>
+        </div>
       )}
     </div>
   )

@@ -32,6 +32,7 @@ export function BuildPanel({
 }) {
   const [showOthers, setShowOthers] = useState(false)
   const [showCandidates, setShowCandidates] = useState(false)
+  const [autoExpanded, setAutoExpanded] = useState(false)
 
   // --- コアビルド ---
   const buildItems = coreBuild?.build_goal_names || coreBuild?.build_goal || []
@@ -89,6 +90,13 @@ export function BuildPanel({
 
   const aiError = suggestion?.error
   const showAiSection = hasSubstitutes && (sorted.length > 0 || aiLoading || aiError)
+
+  // レーン戦終了（15分）後にAI提案を自動展開
+  const gameTime = suggestion?.gameTime || 0
+  if (gameTime >= 900 && !autoExpanded && !showCandidates && sorted.length > 0) {
+    setShowCandidates(true)
+    setAutoExpanded(true)
+  }
 
   return (
     <div className="rounded border border-lol-gold/30 bg-lol-surface/80">
