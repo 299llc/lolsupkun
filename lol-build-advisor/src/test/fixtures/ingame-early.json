@@ -12,78 +12,78 @@
         "team": "ORDER",
         "position": "BOTTOM",
         "level": 6,
-        "scores": { "kills": 1, "deaths": 0, "assists": 2 },
+        "scores": { "kills": 1, "deaths": 0, "assists": 2, "creepScore": 45, "wardScore": 4 },
         "items": [
           { "itemID": 1055, "displayName": "ドランブレード" },
           { "itemID": 3006, "displayName": "バーサーカー ブーツ" }
         ],
-        "flags": {}
+        "flags": []
       },
       "allies": [
         {
           "summonerName": "Ally1", "championName": "ガレン", "enName": "Garen", "championId": 86,
           "team": "ORDER", "position": "TOP", "level": 6,
-          "scores": { "kills": 0, "deaths": 1, "assists": 0 },
+          "scores": { "kills": 0, "deaths": 1, "assists": 0, "creepScore": 38, "wardScore": 2 },
           "items": [{ "itemID": 1054, "displayName": "ドランシールド" }],
-          "flags": {}
+          "flags": []
         },
         {
           "summonerName": "Ally2", "championName": "リー・シン", "enName": "LeeSin", "championId": 64,
           "team": "ORDER", "position": "JUNGLE", "level": 6,
-          "scores": { "kills": 2, "deaths": 0, "assists": 1 },
+          "scores": { "kills": 2, "deaths": 0, "assists": 1, "creepScore": 30, "wardScore": 5 },
           "items": [{ "itemID": 1039, "displayName": "ロングソード" }],
-          "flags": {}
+          "flags": []
         },
         {
           "summonerName": "Ally3", "championName": "アーリ", "enName": "Ahri", "championId": 103,
           "team": "ORDER", "position": "MIDDLE", "level": 6,
-          "scores": { "kills": 1, "deaths": 1, "assists": 1 },
+          "scores": { "kills": 1, "deaths": 1, "assists": 1, "creepScore": 42, "wardScore": 3 },
           "items": [{ "itemID": 1056, "displayName": "ドランリング" }],
-          "flags": {}
+          "flags": []
         },
         {
           "summonerName": "Ally4", "championName": "スレッシュ", "enName": "Thresh", "championId": 412,
           "team": "ORDER", "position": "UTILITY", "level": 5,
-          "scores": { "kills": 0, "deaths": 0, "assists": 3 },
+          "scores": { "kills": 0, "deaths": 0, "assists": 3, "creepScore": 8, "wardScore": 12 },
           "items": [{ "itemID": 3862, "displayName": "レリックシールド" }],
-          "flags": {}
+          "flags": []
         }
       ],
       "enemies": [
         {
           "summonerName": "Enemy1", "championName": "ダリウス", "enName": "Darius", "championId": 122,
           "team": "CHAOS", "position": "TOP", "level": 6,
-          "scores": { "kills": 1, "deaths": 0, "assists": 0 },
+          "scores": { "kills": 1, "deaths": 0, "assists": 0, "creepScore": 40, "wardScore": 1 },
           "items": [{ "itemID": 1054, "displayName": "ドランシールド" }],
-          "flags": {}
+          "flags": []
         },
         {
           "summonerName": "Enemy2", "championName": "ヴィ", "enName": "Vi", "championId": 254,
           "team": "CHAOS", "position": "JUNGLE", "level": 6,
-          "scores": { "kills": 0, "deaths": 1, "assists": 1 },
+          "scores": { "kills": 0, "deaths": 1, "assists": 1, "creepScore": 28, "wardScore": 3 },
           "items": [{ "itemID": 1039, "displayName": "ロングソード" }],
-          "flags": {}
+          "flags": []
         },
         {
           "summonerName": "Enemy3", "championName": "ゼド", "enName": "Zed", "championId": 238,
           "team": "CHAOS", "position": "MIDDLE", "level": 6,
-          "scores": { "kills": 1, "deaths": 1, "assists": 0 },
+          "scores": { "kills": 1, "deaths": 1, "assists": 0, "creepScore": 44, "wardScore": 2 },
           "items": [{ "itemID": 1036, "displayName": "ロングソード" }],
-          "flags": { "assassin": true }
+          "flags": ["assassin"]
         },
         {
           "summonerName": "Enemy4", "championName": "ジンクス", "enName": "Jinx", "championId": 222,
           "team": "CHAOS", "position": "BOTTOM", "level": 5,
-          "scores": { "kills": 0, "deaths": 1, "assists": 0 },
+          "scores": { "kills": 0, "deaths": 1, "assists": 0, "creepScore": 35, "wardScore": 1 },
           "items": [{ "itemID": 1055, "displayName": "ドランブレード" }],
-          "flags": {}
+          "flags": []
         },
         {
           "summonerName": "Enemy5", "championName": "ルル", "enName": "Lulu", "championId": 117,
           "team": "CHAOS", "position": "UTILITY", "level": 5,
-          "scores": { "kills": 0, "deaths": 1, "assists": 0 },
+          "scores": { "kills": 0, "deaths": 1, "assists": 0, "creepScore": 6, "wardScore": 8 },
           "items": [{ "itemID": 3850, "displayName": "スペルシーフエッジ" }],
-          "flags": {}
+          "flags": []
         }
       ]
     },
@@ -102,13 +102,15 @@
   },
   "matchupTip": {
     "opponent": "ジンクス",
-    "summary": "序盤はアッシュのWでポーク有利。ジンクスのロケット射程に注意。",
-    "details": [
+    "summary": "序盤はアッシュのWでポーク有利",
+    "tips": [
       "Lv1-3: Wでポーク → CS差をつける",
       "ジンクスのチョンパーズ(E)の範囲に入らない",
       "Lv6以降: アッシュultでキルチャンスを作る"
     ],
-    "danger": 3
+    "playstyle": "Wでポークしつつ安全にCS。Lv6以降はULTでエンゲージを狙う",
+    "danger": "ジンクスがロケット(Q)に切り替えた時の射程に注意。サポートのCCと合わせてオールインされる危険",
+    "power_spike": "ジンクスはクラーケンスレイヤー完成後にDPSが急上昇"
   },
   "objectivesStatus": {
     "dragon": "ドラゴン: 未討伐 (スポーン済み・取得可能)",

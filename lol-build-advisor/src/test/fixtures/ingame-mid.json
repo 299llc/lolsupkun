@@ -12,112 +12,112 @@
         "team": "ORDER",
         "position": "BOTTOM",
         "level": 13,
-        "scores": { "kills": 5, "deaths": 2, "assists": 8 },
+        "scores": { "kills": 5, "deaths": 2, "assists": 8, "creepScore": 155, "wardScore": 18 },
         "items": [
           { "itemID": 6672, "displayName": "クラーケン スレイヤー" },
           { "itemID": 3085, "displayName": "ルナーン ハリケーン" },
           { "itemID": 3006, "displayName": "バーサーカー ブーツ" },
           { "itemID": 1038, "displayName": "B.F.ソード" }
         ],
-        "flags": {}
+        "flags": []
       },
       "allies": [
         {
           "summonerName": "Ally1", "championName": "ガレン", "enName": "Garen", "championId": 86,
           "team": "ORDER", "position": "TOP", "level": 13,
-          "scores": { "kills": 3, "deaths": 3, "assists": 4 },
+          "scores": { "kills": 3, "deaths": 3, "assists": 4, "creepScore": 140, "wardScore": 8 },
           "items": [
             { "itemID": 3078, "displayName": "トリニティフォース" },
             { "itemID": 3047, "displayName": "プレートスチールキャップ" },
             { "itemID": 3044, "displayName": "ファージ" }
           ],
-          "flags": {}
+          "flags": []
         },
         {
           "summonerName": "Ally2", "championName": "リー・シン", "enName": "LeeSin", "championId": 64,
           "team": "ORDER", "position": "JUNGLE", "level": 12,
-          "scores": { "kills": 4, "deaths": 3, "assists": 6 },
+          "scores": { "kills": 4, "deaths": 3, "assists": 6, "creepScore": 95, "wardScore": 22 },
           "items": [
             { "itemID": 6693, "displayName": "プロウラークロウ" },
             { "itemID": 3158, "displayName": "アイオニアブーツ" }
           ],
-          "flags": {}
+          "flags": []
         },
         {
           "summonerName": "Ally3", "championName": "アーリ", "enName": "Ahri", "championId": 103,
           "team": "ORDER", "position": "MIDDLE", "level": 13,
-          "scores": { "kills": 6, "deaths": 1, "assists": 5 },
+          "scores": { "kills": 6, "deaths": 1, "assists": 5, "creepScore": 148, "wardScore": 12 },
           "items": [
             { "itemID": 6655, "displayName": "ルーデンテンペスト" },
             { "itemID": 3020, "displayName": "ソーサラーシューズ" },
             { "itemID": 3916, "displayName": "オブリビオンオーブ" }
           ],
-          "flags": {}
+          "flags": []
         },
         {
           "summonerName": "Ally4", "championName": "スレッシュ", "enName": "Thresh", "championId": 412,
           "team": "ORDER", "position": "UTILITY", "level": 10,
-          "scores": { "kills": 0, "deaths": 4, "assists": 14 },
+          "scores": { "kills": 0, "deaths": 4, "assists": 14, "creepScore": 18, "wardScore": 38 },
           "items": [
             { "itemID": 3109, "displayName": "ナイトオブザヴォウ" },
             { "itemID": 2065, "displayName": "シュレリアの戦歌" }
           ],
-          "flags": {}
+          "flags": []
         }
       ],
       "enemies": [
         {
           "summonerName": "Enemy1", "championName": "ダリウス", "enName": "Darius", "championId": 122,
           "team": "CHAOS", "position": "TOP", "level": 14,
-          "scores": { "kills": 4, "deaths": 2, "assists": 3 },
+          "scores": { "kills": 4, "deaths": 2, "assists": 3, "creepScore": 150, "wardScore": 5 },
           "items": [
             { "itemID": 6630, "displayName": "ストライドブレイカー" },
             { "itemID": 3047, "displayName": "プレートスチールキャップ" },
             { "itemID": 3053, "displayName": "ステラックの篭手" }
           ],
-          "flags": {}
+          "flags": []
         },
         {
           "summonerName": "Enemy2", "championName": "ヴィ", "enName": "Vi", "championId": 254,
           "team": "CHAOS", "position": "JUNGLE", "level": 12,
-          "scores": { "kills": 3, "deaths": 4, "assists": 5 },
+          "scores": { "kills": 3, "deaths": 4, "assists": 5, "creepScore": 88, "wardScore": 15 },
           "items": [
             { "itemID": 6631, "displayName": "ディヴァインサンダラー" },
             { "itemID": 3111, "displayName": "マーキュリーブーツ" }
           ],
-          "flags": {}
+          "flags": []
         },
         {
           "summonerName": "Enemy3", "championName": "ゼド", "enName": "Zed", "championId": 238,
           "team": "CHAOS", "position": "MIDDLE", "level": 13,
-          "scores": { "kills": 5, "deaths": 4, "assists": 2 },
+          "scores": { "kills": 5, "deaths": 4, "assists": 2, "creepScore": 135, "wardScore": 4 },
           "items": [
             { "itemID": 6693, "displayName": "プロウラークロウ" },
             { "itemID": 3158, "displayName": "アイオニアブーツ" },
             { "itemID": 3134, "displayName": "セレイテッドダーク" }
           ],
-          "flags": { "assassin": true }
+          "flags": ["assassin"]
         },
         {
           "summonerName": "Enemy4", "championName": "ジンクス", "enName": "Jinx", "championId": 222,
           "team": "CHAOS", "position": "BOTTOM", "level": 12,
-          "scores": { "kills": 3, "deaths": 3, "assists": 4 },
+          "scores": { "kills": 3, "deaths": 3, "assists": 4, "creepScore": 142, "wardScore": 6 },
           "items": [
             { "itemID": 6672, "displayName": "クラーケン スレイヤー" },
             { "itemID": 3006, "displayName": "バーサーカー ブーツ" },
             { "itemID": 1038, "displayName": "B.F.ソード" }
           ],
-          "flags": {}
+          "flags": []
         },
         {
           "summonerName": "Enemy5", "championName": "ルル", "enName": "Lulu", "championId": 117,
           "team": "CHAOS", "position": "UTILITY", "level": 10,
-          "scores": { "kills": 0, "deaths": 5, "assists": 8 },
+          "scores": { "kills": 0, "deaths": 5, "assists": 8, "creepScore": 12, "wardScore": 28 },
           "items": [
             { "itemID": 3504, "displayName": "アーデントセンサー" },
             { "itemID": 3117, "displayName": "モビリティブーツ" }
           ],
-          "flags": {}
+          "flags": []
         }
       ]
     },
@@ -140,7 +140,6 @@
       { "id": 3031, "name": "インフィニティ エッジ", "image": "3031.png", "reason": "3コア目完成でダメージ大幅UP" },
       { "id": 3026, "name": "ガーディアンエンジェル", "image": "3026.png", "reason": "ゼドのバースト対策" }
     ],
-    "priority": "IE完成 → GA",
     "gameTime": 1080,
     "totalCalls": 5,
     "history": {
@@ -163,13 +162,15 @@
   ],
   "matchupTip": {
     "opponent": "ジンクス",
-    "summary": "中盤: アッシュはユーティリティで有利。集団戦でultを起点に使う。",
-    "details": [
-      "アッシュultを遠距離から当ててエンゲージ",
-      "ジンクスのスイッチスタンスに合わせてWスロウ",
-      "タワーシージ時はEでビジョン確保"
+    "summary": "中盤はアッシュのユーティリティで有利",
+    "tips": [
+      "アッシュULTを遠距離から当ててエンゲージ起点にする",
+      "ジンクスのスイッチスタンス(Q)に合わせてWスロウで距離管理",
+      "タワーシージ時はE(ホークショット)でビジョン確保"
     ],
-    "danger": 4
+    "playstyle": "集団戦ではULTエンゲージ+Wスロウでユーティリティを発揮。前衛の後ろからDPSを出す",
+    "danger": "ジンクスがクラーケン+ハリケーン完成後はDPS勝負で不利。集団戦でフォーカスされないよう位置取り注意",
+    "power_spike": "ジンクスはパッシブ発動(キル/アシスト)で攻撃速度が急上昇。集団戦で最初のキルを与えない"
   },
   "macroAdvice": {
     "title": "ドラゴン確保",
