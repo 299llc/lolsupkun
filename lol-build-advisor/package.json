@@ -12,6 +12,7 @@
     "electron:build:store": "vite build && electron-builder --win appx",
     "test:ai": "node test/harness/runner.js",
     "test:ai:bedrock": "node test/harness/runner.js --provider bedrock",
+    "test:ai:anthropic": "node test/harness/runner.js --provider anthropic",
     "test:ai:verbose": "node test/harness/runner.js --verbose"
   },
   "dependencies": {

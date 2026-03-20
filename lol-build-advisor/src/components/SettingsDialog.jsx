@@ -206,8 +206,8 @@ export function SettingsDialog({ onClose }) {
   const [refreshResult, setRefreshResult] = useState(null)
   const [legalPage, setLegalPage] = useState(null) // 'privacy' | 'disclaimer' | null
 
-  // プロバイダー設定 (現在はローカルLLMのみ)
-  const [providerType, setProviderType] = useState('ollama')
+  // プロバイダー設定
+  const [providerType, setProviderType] = useState('ollama') // 'ollama' | 'cloud'
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434')
   const [ollamaModel, setOllamaModel] = useState('')
   const [activeModel, setActiveModel] = useState('') // 現在使用中のモデル名
@@ -217,8 +217,10 @@ export function SettingsDialog({ onClose }) {
   const [pullingModel, setPullingModel] = useState(null) // ダウンロード中のモデルID
   const [pullProgress, setPullProgress] = useState(null)
 
-  // Bedrock接続状態
-  const [bedrockStatus, setBedrockStatus] = useState(null) // 'connected' | 'error' | null
+  // クラウドプロバイダー設定
+  const [cloudSubType, setCloudSubType] = useState('bedrock') // 'bedrock' | 'anthropic'
+  const [anthropicKey, setAnthropicKey] = useState('')
+  const [cloudStatus, setCloudStatus] = useState(null) // 'connected' | 'error' | 'validating' | null
 
   useEffect(() => {
     window.electronAPI?.getAiStatus().then(on => setAiOn(!!on))
@@ -227,8 +229,13 @@ export function SettingsDialog({ onClose }) {
     // プロバイダー復元
     window.electronAPI?.getProvider().then(p => {
       if (p?.type === 'bedrock') {
-        setProviderType('bedrock')
-        setBedrockStatus('connected')
+        setProviderType('cloud')
+        setCloudSubType('bedrock')
+        setCloudStatus('connected')
+      } else if (p?.type === 'anthropic') {
+        setProviderType('cloud')
+        setCloudSubType('anthropic')
+        setCloudStatus('connected')
       } else {
         setProviderType('ollama')
       }
@@ -303,11 +310,35 @@ export function SettingsDialog({ onClose }) {
   // プロバイダー切り替え
   const switchProvider = async (type) => {
     setProviderType(type)
-    if (type === 'bedrock') {
-      setBedrockStatus(null)
-      const result = await window.electronAPI?.setBedrockProvider()
-      setBedrockStatus(result?.success ? 'connected' : 'error')
+    if (type === 'cloud') {
+      connectCloud(cloudSubType)
     }
+  }
+
+  // クラウドサブタイプ接続
+  const connectCloud = async (subType) => {
+    setCloudSubType(subType)
+    setCloudStatus('validating')
+    if (subType === 'bedrock') {
+      const result = await window.electronAPI?.setBedrockProvider()
+      setCloudStatus(result?.success ? 'connected' : 'error')
+    } else if (subType === 'anthropic') {
+      // APIキー未入力なら入力待ち
+      if (!anthropicKey) {
+        setCloudStatus(null)
+        return
+      }
+      const result = await window.electronAPI?.setAnthropicProvider(anthropicKey)
+      setCloudStatus(result?.success ? 'connected' : 'error')
+    }
+  }
+
+  // Anthropic APIキー送信
+  const connectAnthropic = async () => {
+    if (!anthropicKey) return
+    setCloudStatus('validating')
+    const result = await window.electronAPI?.setAnthropicProvider(anthropicKey)
+    setCloudStatus(result?.success ? 'connected' : 'error')
   }
 
   return (
@@ -466,9 +497,9 @@ export function SettingsDialog({ onClose }) {
                 ローカル (Free)
               </button>
               <button
-                onClick={() => switchProvider('bedrock')}
+                onClick={() => switchProvider('cloud')}
                 className={`flex-1 py-2 text-xs rounded border transition-colors flex items-center justify-center gap-1.5 ${
-                  providerType === 'bedrock'
+                  providerType === 'cloud'
                     ? 'bg-lol-gold/20 text-lol-gold border-lol-gold/40'
                     : 'bg-lol-surface text-lol-text border-lol-gold-dim/30 hover:border-lol-gold/30'
                 }`}
@@ -477,12 +508,69 @@ export function SettingsDialog({ onClose }) {
                 クラウド (Pro)
               </button>
             </div>
-            {providerType === 'bedrock' && (
-              <div className="flex items-center gap-2 px-1 pt-1">
-                <div className={`w-2 h-2 rounded-full ${bedrockStatus === 'connected' ? 'bg-lol-accent' : bedrockStatus === 'error' ? 'bg-lol-red' : 'bg-lol-text/30'}`} />
-                <span className="text-[11px] text-lol-text-light">
-                  {bedrockStatus === 'connected' ? 'Bedrock (AWS) 接続済み' : bedrockStatus === 'error' ? 'Bedrock 接続失敗 — .env を確認してください' : '接続確認中...'}
-                </span>
+            {providerType === 'cloud' && (
+              <div className="space-y-2 pt-1">
+                {/* サブタイプ切り替え */}
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => connectCloud('bedrock')}
+                    className={`flex-1 py-1 text-[10px] rounded transition-colors ${
+                      cloudSubType === 'bedrock'
+                        ? 'bg-lol-gold/15 text-lol-gold border border-lol-gold/30'
+                        : 'text-lol-text border border-lol-gold-dim/20 hover:border-lol-gold/20'
+                    }`}
+                  >
+                    Bedrock (AWS)
+                  </button>
+                  <button
+                    onClick={() => connectCloud('anthropic')}
+                    className={`flex-1 py-1 text-[10px] rounded transition-colors ${
+                      cloudSubType === 'anthropic'
+                        ? 'bg-lol-gold/15 text-lol-gold border border-lol-gold/30'
+                        : 'text-lol-text border border-lol-gold-dim/20 hover:border-lol-gold/20'
+                    }`}
+                  >
+                    Anthropic API
+                  </button>
+                </div>
+
+                {/* Bedrock ステータス */}
+                {cloudSubType === 'bedrock' && (
+                  <div className="flex items-center gap-2 px-1">
+                    <div className={`w-2 h-2 rounded-full ${cloudStatus === 'connected' ? 'bg-lol-accent' : cloudStatus === 'error' ? 'bg-lol-red' : cloudStatus === 'validating' ? 'bg-lol-blue animate-pulse' : 'bg-lol-text/30'}`} />
+                    <span className="text-[11px] text-lol-text-light">
+                      {cloudStatus === 'connected' ? 'Bedrock (AWS) 接続済み' : cloudStatus === 'error' ? 'Bedrock 接続失敗 — .env を確認してください' : cloudStatus === 'validating' ? '接続確認中...' : '未接続'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Anthropic APIキー入力 */}
+                {cloudSubType === 'anthropic' && (
+                  <div className="space-y-1.5">
+                    <div className="flex gap-1.5">
+                      <input
+                        type="password"
+                        value={anthropicKey}
+                        onChange={(e) => setAnthropicKey(e.target.value)}
+                        placeholder="sk-ant-..."
+                        className="flex-1 px-2 py-1.5 bg-lol-surface border border-lol-gold-dim/30 rounded text-[11px] text-lol-text-light focus:outline-none focus:border-lol-gold/50 placeholder:text-lol-text/30"
+                      />
+                      <button
+                        onClick={connectAnthropic}
+                        disabled={!anthropicKey || cloudStatus === 'validating'}
+                        className="px-3 py-1.5 text-[10px] rounded bg-lol-gold/20 text-lol-gold border border-lol-gold/30 hover:bg-lol-gold/30 disabled:opacity-40 transition-colors"
+                      >
+                        {cloudStatus === 'validating' ? '確認中...' : '接続'}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 px-1">
+                      <div className={`w-2 h-2 rounded-full ${cloudStatus === 'connected' ? 'bg-lol-accent' : cloudStatus === 'error' ? 'bg-lol-red' : cloudStatus === 'validating' ? 'bg-lol-blue animate-pulse' : 'bg-lol-text/30'}`} />
+                      <span className="text-[11px] text-lol-text-light">
+                        {cloudStatus === 'connected' ? 'Anthropic API 接続済み' : cloudStatus === 'error' ? 'API接続失敗 — キーを確認してください' : cloudStatus === 'validating' ? '接続確認中...' : 'APIキーを入力してください'}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
