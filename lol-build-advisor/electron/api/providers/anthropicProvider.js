@@ -24,6 +24,7 @@ class AnthropicProvider {
         model,
         max_tokens: maxTokens,
         temperature,
+        cache_control: { type: 'ephemeral' },
         system: Array.isArray(system) ? system : [{ type: 'text', text: system }],
         messages
       }),

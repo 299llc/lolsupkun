@@ -69,6 +69,8 @@ const state = {
   lcuClient: null,
   aiEnabled: false,
   aiPending: false,
+  claudeModel: null,         // .env CLAUDE_MODEL (macro/suggestion用)
+  claudeQualityModel: null,  // .env CLAUDE_QUALITY_MODEL (matchup/coaching用)
 
   // 試合状態
   lastSuggestion: null,
@@ -351,12 +353,17 @@ function setupIPC() {
 
   const keyPath = path.join(app.getPath('userData'), '.api-key')
 
+  const _modelOpts = () => ({
+    ...(state.claudeModel && { model: state.claudeModel }),
+    ...(state.claudeQualityModel && { qualityModel: state.claudeQualityModel }),
+  })
+
   ipcMain.handle('apikey:get', () => {
     try { return fs.readFileSync(keyPath, 'utf-8') } catch { return '' }
   })
   ipcMain.handle('apikey:set', (_, key) => {
     fs.writeFileSync(keyPath, key, 'utf-8')
-    state.aiClient = new AiClient(key)
+    state.aiClient = new AiClient(key, _modelOpts())
     return true
   })
   ipcMain.handle('apikey:validate', async (_, key) => {
@@ -370,14 +377,14 @@ function setupIPC() {
     const provider = new OllamaProvider(opts || {})
     const ok = await provider.validate()
     if (!ok) return { success: false, error: 'Ollama に接続できません。ollama が起動しているか確認してください。' }
-    state.aiClient = new AiClient(provider)
+    state.aiClient = new AiClient(provider, _modelOpts())
     saveSetting('provider', { type: 'ollama', baseUrl: provider.baseUrl, model: provider.defaultModel })
     return { success: true, model: provider.defaultModel || 'auto' }
   })
 
   ipcMain.handle('provider:set-anthropic', async (_, key) => {
     fs.writeFileSync(keyPath, key, 'utf-8')
-    state.aiClient = new AiClient(key)
+    state.aiClient = new AiClient(key, _modelOpts())
     saveSetting('provider', { type: 'anthropic' })
     return { success: true }
   })
@@ -394,7 +401,7 @@ function setupIPC() {
     const provider = new BedrockProvider({ apiKey, region, accessKeyId, secretAccessKey })
     const ok = await provider.validate()
     if (!ok) return { success: false, error: 'Bedrock 接続に失敗しました' }
-    state.aiClient = new AiClient(provider)
+    state.aiClient = new AiClient(provider, _modelOpts())
     saveSetting('provider', { type: 'bedrock', region })
     return { success: true }
   })
@@ -1502,14 +1509,9 @@ function handleMatchupTip(me, resolvedPosition, enemies) {
 function handleAiSuggestion(gameData) {
   const triggered = state.diffDetector.check(gameData)
 
-  // 完成アイテム3個以上になるまでAI提案しない
-  const me = gameData.allPlayers?.find(p => p.summonerName === gameData.activePlayer?.summonerName)
-  const completedItems = (me?.items || []).filter(i => {
-    const patchItem = getItemById(String(i.itemID))
-    if (!patchItem) return false
-    return isCompletedItem(patchItem)
-  }).length
-  if (completedItems < 3) return
+  // 15分未満はAI提案しない
+  const gameTime = gameData.gameData?.gameTime || 0
+  if (gameTime < 900) return
 
   if ((triggered || !state.lastSuggestion) && !state.aiPending && state.aiClient && state.aiEnabled && state.currentCoreBuild) {
     const gameState = state.currentGameState
@@ -1598,7 +1600,7 @@ function handleMacroAdvice(gameData, me, allies, enemies) {
   }
 
   const shouldMacro = timeSinceLastMacro >= MACRO_INTERVAL_MS ||
-    (objectiveTaken && timeSinceLastMacro >= MACRO_DEBOUNCE_MS) ||
+    objectiveTaken ||
     objectivePreTrigger
 
   if (state.aiClient && state.aiEnabled && !state.macroPending && shouldMacro) {
@@ -1636,11 +1638,26 @@ if (!gotTheLock) {
     createWindow()
     setupIPC()
 
+    // .env からモデル設定を読み込み
+    const env = loadEnv()
+    if (env.CLAUDE_MODEL) {
+      state.claudeModel = env.CLAUDE_MODEL
+      console.log(`[Config] CLAUDE_MODEL=${state.claudeModel}`)
+    }
+    if (env.CLAUDE_QUALITY_MODEL) {
+      state.claudeQualityModel = env.CLAUDE_QUALITY_MODEL
+      console.log(`[Config] CLAUDE_QUALITY_MODEL=${state.claudeQualityModel}`)
+    }
+    const aiOpts = {
+      ...(state.claudeModel && { model: state.claudeModel }),
+      ...(state.claudeQualityModel && { qualityModel: state.claudeQualityModel }),
+    }
+
     // プロバイダー復元 (Ollama or Anthropic)
     const savedProvider = loadSettings().provider
     if (savedProvider?.type === 'ollama') {
       const provider = new OllamaProvider({ baseUrl: savedProvider.baseUrl, model: savedProvider.model })
-      state.aiClient = new AiClient(provider)
+      state.aiClient = new AiClient(provider, aiOpts)
       console.log(`[Provider] Restored Ollama (model: ${savedProvider.model || 'auto'})`)
 
       // Ollama が起動していなければ自動起動
@@ -1661,7 +1678,7 @@ if (!gotTheLock) {
       try {
         const key = fs.readFileSync(keyPath, 'utf-8')
         if (key && key.startsWith('sk-ant-')) {
-          state.aiClient = new AiClient(key)
+          state.aiClient = new AiClient(key, aiOpts)
           console.log('[Provider] Restored Anthropic')
         } else {
           console.log('[Provider] No valid Anthropic key found')
@@ -1678,7 +1695,7 @@ if (!gotTheLock) {
           const qwen = models.find(m => m.name.includes('qwen'))
           const modelName = qwen?.name || models[0]?.name || 'qwen3.5:9b'
           autoProvider.defaultModel = modelName
-          state.aiClient = new AiClient(autoProvider)
+          state.aiClient = new AiClient(autoProvider, aiOpts)
           saveSetting('provider', { type: 'ollama', baseUrl: autoProvider.baseUrl, model: modelName })
           console.log(`[Provider] Auto-detected Ollama (model: ${modelName})`)
         } else {
@@ -1687,7 +1704,7 @@ if (!gotTheLock) {
           try {
             const key = fs.readFileSync(keyPath, 'utf-8')
             if (key && key.startsWith('sk-ant-')) {
-              state.aiClient = new AiClient(key)
+              state.aiClient = new AiClient(key, aiOpts)
               console.log('[Provider] Fallback to Anthropic key')
             }
           } catch {}

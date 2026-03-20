@@ -6,7 +6,7 @@
  *
  * プロバイダー抽象化: AnthropicProvider (BYOK) / BedrockProvider (AWS) / OllamaProvider (ローカルLLM) を切り替え可能
  */
-const { ITEM_PROMPT, MATCHUP_PROMPT, MACRO_PROMPT, COACHING_PROMPT } = require('../core/prompts')
+const { DOMAIN_KNOWLEDGE, ITEM_PROMPT, MATCHUP_PROMPT, MACRO_PROMPT, COACHING_PROMPT } = require('../core/prompts')
 const {
   LOCAL_ITEM_STEP1_PROMPT, LOCAL_ITEM_STEP2_PROMPT,
   LOCAL_MATCHUP_STEP1_PROMPT, LOCAL_MATCHUP_STEP2_PROMPT,
@@ -16,19 +16,24 @@ const {
 const { buildKnowledgeContext } = require('../core/knowledgeDb')
 const { AnthropicProvider } = require('./providers/anthropicProvider')
 
-const MODEL_HAIKU = 'claude-haiku-4-5-20251001'
+const DEFAULT_MODEL = 'claude-haiku-4-5-20251001'
 
 class AiClient {
   /**
    * @param {string|object} providerOrApiKey - API キー文字列 (後方互換) またはプロバイダーインスタンス
+   * @param {object} [opts] - オプション
+   * @param {string} [opts.model] - 高頻度呼び出し用モデル (macro/suggestion)
+   * @param {string} [opts.qualityModel] - 品質重視呼び出し用モデル (matchup/coaching)
    */
-  constructor(providerOrApiKey) {
+  constructor(providerOrApiKey, opts = {}) {
     if (typeof providerOrApiKey === 'string') {
       // 後方互換: API キー文字列が渡された場合は AnthropicProvider を自動生成
       this.provider = new AnthropicProvider(providerOrApiKey)
     } else {
       this.provider = providerOrApiKey
     }
+    this.model = opts.model || DEFAULT_MODEL
+    this.qualityModel = opts.qualityModel || DEFAULT_MODEL
     this.coreBuild = null
     this.substituteItems = []
     this.matchContext = null
@@ -60,6 +65,27 @@ class AiClient {
   clearLogs() { this.logs = [] }
   getProviderType() { return this.provider?.type || 'unknown' }
   isLocalLLM() { return this.provider?.type === 'ollama' }
+
+  /**
+   * Prompt Caching 用 system 配列を構築
+   * DOMAIN_KNOWLEDGE（不変） → taskPrompt → championKnowledge（試合中不変） → extraContext の順に配置し、
+   * 共通プレフィックスが Haiku 4.5 のキャッシュ閾値 (4096トークン) を超えるようにする
+   * @param {string} taskPrompt - タスク固有のプロンプト
+   * @param {string} [extraContext] - 追加の静的コンテキスト（チーム構成等、試合中不変）
+   */
+  _buildSystem(taskPrompt, extraContext) {
+    const blocks = [
+      { type: 'text', text: DOMAIN_KNOWLEDGE, cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: taskPrompt, cache_control: { type: 'ephemeral' } },
+    ]
+    if (this.championKnowledge) {
+      blocks.push({ type: 'text', text: this.championKnowledge, cache_control: { type: 'ephemeral' } })
+    }
+    if (extraContext) {
+      blocks.push({ type: 'text', text: extraContext, cache_control: { type: 'ephemeral' } })
+    }
+    return blocks
+  }
 
   clearMatch() {
     this.matchContext = null
@@ -187,7 +213,7 @@ class AiClient {
     } else {
       // Step1実行
       analysis = await this._callApi({
-        model: MODEL_HAIKU, maxTokens: step1MaxTokens, temperature: 0.7,
+        model: this.model, maxTokens: step1MaxTokens, temperature: 0.7,
         system: step1System, messages,
         timeoutMs, logType: `${logPrefix}-step1`, rawText: true
       })
@@ -198,7 +224,7 @@ class AiClient {
     }
 
     return this._callApi({
-      model: MODEL_HAIKU, maxTokens: step2MaxTokens, temperature: 0.3,
+      model: this.model, maxTokens: step2MaxTokens, temperature: 0.3,
       system: step2System,
       messages: [{ role: 'user', content: analysis }],
       timeoutMs: 30000, logType: `${logPrefix}-step2`
@@ -243,32 +269,23 @@ class AiClient {
       : JSON.stringify(structuredInput, null, 2)
     const isLocal = this.isLocalLLM()
 
-    const messages = []
-    if (!isLocal && this.matchContext) {
-      messages.push(
-        { role: 'user', content: [{ type: 'text', text: this.matchContext, cache_control: { type: 'ephemeral' } }] },
-        { role: 'assistant', content: '了解' },
-        { role: 'user', content: userMessage }
-      )
-    } else {
+    let aiResult
+    if (isLocal) {
       // ローカルLLM: マルチターンを避け、1メッセージにまとめる
       const parts = []
       if (this.matchContext) parts.push(this.matchContext)
       parts.push(userMessage)
-      messages.push({ role: 'user', content: parts.join('\n\n') })
-    }
-
-    let aiResult
-    if (isLocal) {
       aiResult = await this._twoStepLocal({
         step1System: LOCAL_ITEM_STEP1_PROMPT, step2System: LOCAL_ITEM_STEP2_PROMPT,
-        messages, step1MaxTokens: 500, step2MaxTokens: 300, logPrefix: 'suggestion'
+        messages: [{ role: 'user', content: parts.join('\n\n') }],
+        step1MaxTokens: 500, step2MaxTokens: 300, logPrefix: 'suggestion'
       })
     } else {
       aiResult = await this._callApi({
-        model: MODEL_HAIKU, maxTokens: 600, temperature: 0,
-        system: [{ type: 'text', text: ITEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-        messages, timeoutMs: 30000, logType: 'suggestion'
+        model: this.model, maxTokens: 600, temperature: 0,
+        system: this._buildSystem(ITEM_PROMPT, this.matchContext),
+        messages: [{ role: 'user', content: userMessage }],
+        timeoutMs: 30000, logType: 'suggestion'
       })
     }
 
@@ -311,13 +328,9 @@ class AiClient {
         step1MaxTokens: 600, step2MaxTokens: 400, logPrefix: 'matchup'
       })
     } else {
-      const system = [{ type: 'text', text: MATCHUP_PROMPT, cache_control: { type: 'ephemeral' } }]
-      if (this.championKnowledge) {
-        system.push({ type: 'text', text: this.championKnowledge, cache_control: { type: 'ephemeral' } })
-      }
       result = await this._callApi({
-        model: MODEL_HAIKU, maxTokens: 700, temperature: 0,
-        system,
+        model: this.qualityModel, maxTokens: 700, temperature: 0,
+        system: this._buildSystem(MATCHUP_PROMPT),
         messages: [{ role: 'user', content: userContent }],
         timeoutMs: 20000, logType: 'matchup'
       })
@@ -360,20 +373,10 @@ class AiClient {
         logPrefix: 'macro', timeoutMs: 60000
       })
     } else {
-      const messages = []
-      if (staticContext) {
-        messages.push(
-          { role: 'user', content: [{ type: 'text', text: staticContext, cache_control: { type: 'ephemeral' } }] },
-          { role: 'assistant', content: '了解。リアルタイムの試合状況を送ってください。' },
-          { role: 'user', content: dynamicContent }
-        )
-      } else {
-        messages.push({ role: 'user', content: dynamicContent })
-      }
       result = await this._callApi({
-        model: MODEL_HAIKU, maxTokens: 500, temperature: 0,
-        system: [{ type: 'text', text: MACRO_PROMPT, cache_control: { type: 'ephemeral' } }],
-        messages,
+        model: this.model, maxTokens: 500, temperature: 0,
+        system: this._buildSystem(MACRO_PROMPT, staticContext),
+        messages: [{ role: 'user', content: dynamicContent }],
         timeoutMs: 20000, logType: 'macro'
       })
     }
@@ -405,15 +408,11 @@ class AiClient {
         step1MaxTokens: 1500, step2MaxTokens: 800, logPrefix: 'coaching', timeoutMs: 120000
       })
     } else {
-      const system = [{ type: 'text', text: COACHING_PROMPT, cache_control: { type: 'ephemeral' } }]
-      if (this.championKnowledge) {
-        system.push({ type: 'text', text: this.championKnowledge, cache_control: { type: 'ephemeral' } })
-      }
       result = await this._callApi({
-        model: MODEL_HAIKU,
+        model: this.qualityModel,
         maxTokens: 4000,
         temperature: 0.3,
-        system,
+        system: this._buildSystem(COACHING_PROMPT),
         messages: [{ role: 'user', content: userContent }],
         timeoutMs: 60000,
         logType: 'coaching'
