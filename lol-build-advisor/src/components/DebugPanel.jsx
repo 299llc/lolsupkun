@@ -136,11 +136,31 @@ export function DebugPanel({ onClose }) {
                       in:{log.tokens.input} out:{log.tokens.output}
                     </span>
                   )}
+                  {log.sessionInfo && (
+                    <span className="text-[10px] text-lol-blue shrink-0" title={`Session: ${log.sessionInfo.totalMessages} messages, phase: ${log.sessionInfo.phase}`}>
+                      T{log.sessionInfo.turns}
+                    </span>
+                  )}
                 </button>
 
                 {/* Expanded: Request → Response pair */}
                 {isOpen && (
                   <div className="px-3 pb-3 space-y-2">
+                    {/* SESSION INFO */}
+                    {log.sessionInfo && (
+                      <div className="rounded border border-lol-blue/30 bg-lol-blue/5 px-3 py-2">
+                        <div className="flex items-center gap-1 mb-1">
+                          <MessageSquare size={10} className="text-lol-blue" />
+                          <span className="text-[10px] font-heading tracking-wider text-lol-blue">SESSION</span>
+                        </div>
+                        <div className="flex gap-3 text-[10px] text-lol-text-light">
+                          <span>ターン: <span className="text-lol-blue">{log.sessionInfo.turns}</span></span>
+                          <span>メッセージ数: <span className="text-lol-blue">{log.sessionInfo.totalMessages}</span></span>
+                          <span>フェーズ: <span className="text-lol-blue">{log.sessionInfo.phase === 'early' ? '序盤' : log.sessionInfo.phase === 'mid' ? '中盤' : '終盤'}</span></span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* REQUEST */}
                     <div>
                       <div className="flex items-center justify-between mb-1">

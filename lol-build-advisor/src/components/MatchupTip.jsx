@@ -56,13 +56,13 @@ export function MatchupTip({ tip, laningOver = false }) {
             {tip.danger && (
               <div className="flex items-start gap-1.5 text-xs">
                 <AlertTriangle size={11} className="text-lol-red shrink-0 mt-0.5" />
-                <span className="text-lol-red/90">{tip.danger}</span>
+                <span className="text-lol-red/90"><span className="font-bold">警戒</span> {tip.danger}</span>
               </div>
             )}
             {tip.power_spike && (
               <div className="flex items-start gap-1.5 text-xs">
                 <Zap size={11} className="text-lol-gold shrink-0 mt-0.5" />
-                <span className="text-lol-gold/90">{tip.power_spike}</span>
+                <span className="text-lol-gold/90"><span className="font-bold">強化</span> {tip.power_spike}</span>
               </div>
             )}
           </div>

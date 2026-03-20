@@ -33,7 +33,7 @@ function objectiveStatus(name, config, kills, gameTime) {
     if (rem <= 90) {
       return `${name}: まもなくリスポーン（あと${formatTime(rem)}）→ 準備開始 (${kills.length}体討伐済み)`
     }
-    return `${name}: リスポーン待ち（あと${formatTime(rem)}）→ 対象外 (${kills.length}体討伐済み)`
+    return `${name}: リスポーン待ち（あと${formatTime(rem)}） (${kills.length}体討伐済み)`
   }
 
   // キルイベントなし → ゲーム時間ベースのフォールバック
@@ -44,7 +44,7 @@ function objectiveStatus(name, config, kills, gameTime) {
   if (rem <= 90) {
     return `${name}: まもなくスポーン（あと${formatTime(rem)}）→ 準備開始`
   }
-  return `${name}: 未出現（スポーンまで${formatTime(rem)}）→ 対象外`
+  return `${name}: 未出現（スポーンまで${formatTime(rem)}）`
 }
 
 function formatTime(seconds) {
@@ -94,7 +94,7 @@ function buildMacroDynamicContext(gameData, me, allies, enemies) {
     objectiveStatus('バロン', OBJECTIVES.baron, baron, gameTime),
     objectiveStatus('ヴォイドグラブ', OBJECTIVES.voidgrub, voidgrub, gameTime),
     objectiveStatus('ヘラルド', OBJECTIVES.herald, herald, gameTime),
-  ].filter(line => !line.includes('終了') && !line.includes('対象外'))
+  ].filter(line => !line.includes('終了') && !line.includes('リスポーン待ち') && !line.includes('未出現'))
 
   const lines = [
     `【時間】${minutes}分 (${phase})`,
@@ -158,4 +158,31 @@ function getObjectiveTimers(events, gameTime) {
   }
 }
 
-module.exports = { buildMacroStaticContext, buildMacroDynamicContext, objectiveStatus, getObjectivesSummary, getObjectiveTimers }
+/**
+ * 現在利用可能・準備中のオブジェクト名一覧を返す（知識選択用）
+ * 「終了」「対象外」のオブジェクトは含まない
+ * @returns {string[]} 例: ['ドラゴン', 'バロン']
+ */
+function getAvailableObjectiveNames(events, gameTime) {
+  const { dragon, baron, herald, voidgrub } = classifyObjectiveEvents(events)
+  const names = []
+
+  const checks = [
+    ['ドラゴン', OBJECTIVES.dragon, dragon],
+    ['バロン', OBJECTIVES.baron, baron],
+    ['ヘラルド', OBJECTIVES.herald, herald],
+    ['ヴォイドグラブ', OBJECTIVES.voidgrub, voidgrub],
+  ]
+
+  for (const [name, config, kills] of checks) {
+    const status = objectiveStatus(name, config, kills, gameTime)
+    // 「終了」「リスポーン待ち」「未出現」でなければ利用可能とみなす
+    if (!status.includes('終了') && !status.includes('リスポーン待ち') && !status.includes('未出現')) {
+      names.push(name)
+    }
+  }
+
+  return names
+}
+
+module.exports = { buildMacroStaticContext, buildMacroDynamicContext, objectiveStatus, getObjectivesSummary, getObjectiveTimers, getAvailableObjectiveNames }

@@ -71,6 +71,7 @@ class RuleEngine {
   }
 
   _checkCS(me, minutes, position) {
+    if (position === 'SUP') return null // サポートはCS不要
     if (minutes < 3) return null // 序盤はスキップ
     // 60秒に1回まで
     const now = Date.now()

@@ -1,10 +1,10 @@
-const { ClaudeApiClient } = require('../electron/api/claudeApi');
+const { AiClient } = require('../electron/api/aiClient');
 const { ContextBuilder } = require('../electron/api/contextBuilder');
 
 const API_KEY = 'REPLACE_WITH_YOUR_KEY';
 
 async function run() {
-  const client = new ClaudeApiClient(API_KEY);
+  const client = new AiClient(API_KEY);
 
   // テスト1: APIキー検証
   console.log('--- APIキー検証 ---');

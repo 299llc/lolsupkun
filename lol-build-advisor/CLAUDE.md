@@ -54,7 +54,7 @@ LoL Client (port 2999) → LiveClientPoller (3秒ポーリング)
 
 | モジュール | 役割 |
 |---|---|
-| `claudeApi.js` | Claude API クライアント。共通 `_callApi()` メソッドで4種のAI呼び出しを統一 |
+| `aiClient.js` | AI クライアント。共通 `_callApi()` メソッドで4種のAI呼び出しを統一 |
 | `contextBuilder.js` | ゲームデータを AI 用プロンプトに変換（静的/動的分離） |
 | `diffDetector.js` | 差分検知。AI 呼び出しトリガー判定 |
 | `liveClient.js` | Riot Live Client Data API (localhost:2999) からゲームデータ取得 |

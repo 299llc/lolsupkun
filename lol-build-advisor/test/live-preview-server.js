@@ -7,11 +7,11 @@ const { ContextBuilder, extractEnName } = require('../electron/api/contextBuilde
 const { DiffDetector } = require('../electron/api/diffDetector');
 const { LcuClient } = require('../electron/api/lcuClient');
 const { initPatchData, getVersion, getChampionById, getItemById, loadSpellsForMatch, getSpells } = require('../electron/api/patchData');
-const { ClaudeApiClient } = require('../electron/api/claudeApi');
+const { AiClient } = require('../electron/api/aiClient');
 
 // APIキー（テスト用直接指定）
 const API_KEY = 'REPLACE_WITH_YOUR_KEY';
-const claude = new ClaudeApiClient(API_KEY);
+const claude = new AiClient(API_KEY);
 
 const cb = new ContextBuilder();
 const dd = new DiffDetector();

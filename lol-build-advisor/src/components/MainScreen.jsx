@@ -122,7 +122,7 @@ function ObjectivesPanel({ objectives }) {
       </div>
       <div className="flex flex-col gap-0.5">
         {items.map(({ key, label }) => (
-          <span key={key} className={`text-[10px] leading-tight ${label.includes('取得可能') ? 'text-lol-accent' : label.includes('終了') ? 'text-lol-text/30' : label.includes('対象外') ? 'text-lol-text/50' : 'text-lol-text-light'}`}>
+          <span key={key} className={`text-[10px] leading-tight ${label.includes('取得可能') ? 'text-lol-accent' : label.includes('終了') ? 'text-lol-text/30' : label.includes('未出現') || label.includes('リスポーン待ち') ? 'text-lol-text/50' :'text-lol-text-light'}`}>
             {label}
           </span>
         ))}

@@ -3,7 +3,8 @@
     "allow": [
       "Bash(node -e \":*)",
       "Bash(grep -r \"ddragon\\\\|item.*image\\\\|Item\" /c/Users/music/Documents/develop/ろるさぽくん/lol-build-advisor/src/components --include=*.jsx)",
-      "Bash(npm create:*)"
+      "Bash(npm create:*)",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }

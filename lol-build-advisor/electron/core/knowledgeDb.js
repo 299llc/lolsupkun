@@ -215,11 +215,14 @@ const MACRO_TEXTBOOK = {
     'バロン失敗の3大原因: ウェーブ未プッシュ、視界不足、チーム分散',
   ],
 
-  // ── ヘラルド/ヴォイドグラブ ──
-  heraldVoidgrub: [
+  // ── ヴォイドグラブ ──
+  voidgrub: [
     'ヴォイドグラブ: 6:00スポーン、3体1組×最大2組(計6体)。1組全滅後4分で次の組がスポーン。14:45で消滅',
     'ヴォイドグラブ3体確保→タワー攻撃時にヴォイドミニオン召喚。6体確保→更に強化。スプリットプッシュ力が大幅向上',
     'ヴォイドグラブはTOPサイドのオブジェクト。TOP+JGの2人で確保を狙う。MIDの優先権があると更に安全',
+  ],
+  // ── ヘラルド ──
+  herald: [
     'ヘラルド: 15:00スポーン、19:45で消滅(戦闘中なら19:55)。チャージ攻撃でタワーに2000-3000ダメージ。プレート2-3枚を一撃',
     'ヘラルドはプレートが多く残っているタワーに使う。プレート1枚=120G。ヘラルド1回でプレート2-3枚=240-360G+タワーへのダメージ',
     'ヘラルドはドラゴンとのオブジェクトトレードの判断材料。BOTでドラゴン取られる代わりにTOPでヘラルド+タワー=実質得',
@@ -778,7 +781,15 @@ function buildKnowledgeContext(position, gameTimeSec, opts = {}) {
  * @param {number} killDiff - キル差（味方-敵、正=優勢、負=劣勢）
  * @returns {string} 戦略知識コンテキスト
  */
-function buildMacroKnowledge(position, gameTimeSec, killDiff, rank) {
+/**
+ * @param {string} position - TOP/JG/MID/ADC/SUP
+ * @param {number} gameTimeSec
+ * @param {number} killDiff
+ * @param {string} rank
+ * @param {string[]} [availableObjectives] - 利用可能オブジェクト名一覧 (例: ['ドラゴン', 'バロン'])
+ *   指定された場合、一覧に含まれないオブジェクトの知識セクションは注入しない
+ */
+function buildMacroKnowledge(position, gameTimeSec, killDiff, rank, availableObjectives) {
   const lines = []
   const phase = getGamePhase(gameTimeSec)
   const phaseName = phase === 'early' ? '序盤' : phase === 'mid' ? '中盤' : '終盤'
@@ -797,141 +808,69 @@ function buildMacroKnowledge(position, gameTimeSec, killDiff, rank) {
     for (const tip of tips) lines.push(`- ${tip}`)
   }
 
-  // ── ロール別の現フェーズ戦略 ──
+  // オブジェクト関連知識のフィルタ: 利用可能オブジェクト一覧が渡されていれば、
+  // 存在しないオブジェクトの知識セクションは注入しない（LLMが言及しないようにする）
+  const hasObjective = (name) => !availableObjectives || availableObjectives.includes(name)
+
+  // ── ロール別の現フェーズ戦略（1行で十分） ──
   if (role) {
     const phaseAdvice = phase === 'early' ? role.earlyGame : phase === 'mid' ? role.midGame : role.lateGame
-    lines.push(`【${position}の${phaseName}戦略】`)
-    lines.push(phaseAdvice)
+    lines.push(`【${position}の${phaseName}戦略】${phaseAdvice}`)
   }
 
-  // ── 勝利条件（常に注入） ──
-  addSection('勝利条件の判断基準', MACRO_TEXTBOOK.winConditions)
-
-  // ── 状況に応じた戦略を選択 ──
+  // ── 状況に応じた戦略（最大1セクション） ──
   if (killDiff <= -10) {
-    // 大幅劣勢: 最優先で安全な行動を指示
     lines.push('')
-    lines.push('【⚠️ 大幅劣勢 — 最重要ルール】')
-    lines.push('- デスしないことが最優先。1デスが敵のバロン・インヒビに直結する')
-    lines.push('- 集団戦・オブジェクト争奪は絶対に仕掛けない。敵がミスするまで耐える')
-    lines.push('- タワー下でファームし、ウェーブを安全に処理する')
-    lines.push('- 1人で敵の視界に入らない。必ず味方と行動する')
-    lines.push('- 唯一の勝ち筋はキャッチ（敵の孤立した1人を捕まえる）')
-    lines.push('')
-    addSection('劣勢時の戦い方', MACRO_TEXTBOOK.playingFromBehind)
-    addSection('カムバックゴールド', MACRO_TEXTBOOK.comebackGoldMechanics)
+    lines.push('【大幅劣勢】デスしないことが最優先。集団戦を避け、タワー下でファーム。キャッチ（敵の孤立した1人を捕まえる）が唯一の勝ち筋')
   } else if (killDiff <= -3) {
-    addSection('劣勢時の戦い方', MACRO_TEXTBOOK.playingFromBehind)
+    addSection('劣勢時の戦い方', MACRO_TEXTBOOK.playingFromBehind.slice(0, 4))
   } else if (killDiff >= 5) {
-    addSection('優勢時の畳み方', MACRO_TEXTBOOK.closingOutGames)
+    addSection('優勢時の畳み方', MACRO_TEXTBOOK.closingOutGames.slice(0, 4))
   }
 
-  // ── フェーズに応じた知識 ──
+  // ── フェーズ×状況に応じて最大3-4セクションのみ注入 ──
+  // 9Bモデルにはコンパクトなコンテキストが必要（目標: 3000-4000トークン以内）
   if (phase === 'early') {
-    addSection('序盤のウェーブ管理', MACRO_TEXTBOOK.earlyWaveManagement)
-    addSection('ミニオンウェーブ計算', MACRO_TEXTBOOK.minionWaveMath)
-    addSection('レーンでのトレード', MACRO_TEXTBOOK.laneTrading)
-    addSection('トレーディングスタンス', MACRO_TEXTBOOK.tradingStance)
-    addSection('テザリング', MACRO_TEXTBOOK.tethering)
-    addSection('経験値の否定', MACRO_TEXTBOOK.experienceDenial)
-    addSection('リコール最適化', MACRO_TEXTBOOK.resetOptimization)
-    addSection('序盤のビジョン', MACRO_TEXTBOOK.earlyVision)
-    addSection('ヘラルド/ヴォイドグラブ', MACRO_TEXTBOOK.heraldVoidgrub)
-    addSection('サモナースペル追跡', MACRO_TEXTBOOK.summonerSpellTracking)
-    // JG向け
+    // 序盤: ウェーブ管理 + オブジェクト + ロール別1つ
+    addSection('序盤のウェーブ管理', MACRO_TEXTBOOK.earlyWaveManagement.slice(0, 3))
+    if (hasObjective('ヴォイドグラブ')) {
+      addSection('ヴォイドグラブ', MACRO_TEXTBOOK.voidgrub)
+    }
+    if (hasObjective('ヘラルド')) {
+      addSection('ヘラルド', MACRO_TEXTBOOK.herald.slice(0, 2))
+    }
     if (position === 'JG') {
-      addSection('ジャングルトラッキング', MACRO_TEXTBOOK.jungleTracking)
-      addSection('カウンタージャングル', MACRO_TEXTBOOK.counterJungling)
-    }
-    // MID/SUP向け
-    if (position === 'MID' || position === 'SUP') {
-      addSection('ローム', MACRO_TEXTBOOK.roaming)
-    }
-    // TOP向けTP運用
-    if (position === 'TOP') {
-      addSection('テレポート運用', MACRO_TEXTBOOK.teleportUsage)
-    }
-    // 優勢時にスロープッシュ→ダイブ
-    if (killDiff >= 1) {
-      addSection('スロープッシュ→ダイブ', MACRO_TEXTBOOK.slowPushIntoDive)
-      addSection('タワーアグロ管理', MACRO_TEXTBOOK.towerAggroManagement)
+      addSection('ジャングル', MACRO_TEXTBOOK.jungleTracking.slice(0, 3))
+    } else if (position === 'MID' || position === 'SUP') {
+      addSection('ローム', MACRO_TEXTBOOK.roaming.slice(0, 3))
     }
   } else if (phase === 'mid') {
-    // 中盤
-    addSection('中盤トランジション', MACRO_TEXTBOOK.midGameTransition)
-    addSection('テンポとイニシアチブ', MACRO_TEXTBOOK.tempoAndInitiative)
+    // 中盤: オブジェクト判断 + ウェーブ + チーム戦/ロール別
     addSection('オブジェクト優先度', MACRO_TEXTBOOK.objectivePriority)
-    addSection('オブジェクト前のレーン状態', MACRO_TEXTBOOK.laneStateBeforeObjectives)
     addSection('オブジェクト準備', MACRO_TEXTBOOK.objectivePrep)
-    addSection('クロスマッププレイ', MACRO_TEXTBOOK.crossMapPlay)
-    addSection('ウェーブ管理', MACRO_TEXTBOOK.waveManagement)
-    addSection('ビジョンコントロール', MACRO_TEXTBOOK.lateVision)
-    addSection('霧とブッシュの活用', MACRO_TEXTBOOK.fogOfWarUsage)
-    addSection('チーム戦', MACRO_TEXTBOOK.teamfighting)
-    addSection('戦うか撤退かの判断', MACRO_TEXTBOOK.fightOrFlight)
-    // ロール別チーム戦
+    if (position !== 'SUP') {
+      addSection('ウェーブ管理', MACRO_TEXTBOOK.waveManagement.slice(0, 4))
+    }
+    // ロール別チーム戦（1行）
     if (MACRO_TEXTBOOK.teamfightByRole[position]) {
-      lines.push(`- ${MACRO_TEXTBOOK.teamfightByRole[position]}`)
+      lines.push(`【${position}のチーム戦】${MACRO_TEXTBOOK.teamfightByRole[position]}`)
     }
-    // スプリットプッシュ（TOP/ファイター向け）
     if (position === 'TOP') {
-      addSection('スプリットプッシュ', MACRO_TEXTBOOK.splitPush)
-      addSection('テレポート運用', MACRO_TEXTBOOK.teleportUsage)
+      addSection('スプリットプッシュ', MACRO_TEXTBOOK.splitPush.slice(0, 3))
     }
-    // MID/SUP向けのローム（中盤でも有効）
-    if (position === 'MID' || position === 'SUP') {
-      addSection('ローム', MACRO_TEXTBOOK.roaming)
-    }
-    // JG向けカウンタージャングル
-    if (position === 'JG') {
-      addSection('カウンタージャングル', MACRO_TEXTBOOK.counterJungling)
-    }
-    addSection('バロンベイト', MACRO_TEXTBOOK.baronBait)
-    addSection('デスタイマー活用', MACRO_TEXTBOOK.deathTimerAbuse)
   } else {
-    // 終盤
-    addSection('テンポとイニシアチブ', MACRO_TEXTBOOK.tempoAndInitiative)
+    // 終盤: オブジェクト + チーム戦判断
     addSection('オブジェクト優先度', MACRO_TEXTBOOK.objectivePriority)
-    addSection('オブジェクト前のレーン状態', MACRO_TEXTBOOK.laneStateBeforeObjectives)
-    addSection('オブジェクト準備', MACRO_TEXTBOOK.objectivePrep)
-    addSection('クロスマッププレイ', MACRO_TEXTBOOK.crossMapPlay)
-    addSection('ウェーブ管理', MACRO_TEXTBOOK.waveManagement)
-    addSection('ビジョンコントロール', MACRO_TEXTBOOK.lateVision)
-    addSection('霧とブッシュの活用', MACRO_TEXTBOOK.fogOfWarUsage)
-    addSection('チーム戦', MACRO_TEXTBOOK.teamfighting)
-    addSection('戦うか撤退かの判断', MACRO_TEXTBOOK.fightOrFlight)
-    // ロール別チーム戦
+    if (hasObjective('ドラゴン')) {
+      addSection('エルダードラゴン', MACRO_TEXTBOOK.elderDragon.slice(0, 3))
+    }
+    if (hasObjective('バロン')) {
+      addSection('バロン戦略', MACRO_TEXTBOOK.baronBait.slice(0, 3))
+    }
+    addSection('チーム戦判断', MACRO_TEXTBOOK.fightOrFlight.slice(0, 4))
     if (MACRO_TEXTBOOK.teamfightByRole[position]) {
-      lines.push(`- ${MACRO_TEXTBOOK.teamfightByRole[position]}`)
+      lines.push(`【${position}のチーム戦】${MACRO_TEXTBOOK.teamfightByRole[position]}`)
     }
-    // スプリットプッシュ（TOP/ファイター向け）
-    if (position === 'TOP') {
-      addSection('スプリットプッシュ', MACRO_TEXTBOOK.splitPush)
-      addSection('テレポート運用', MACRO_TEXTBOOK.teleportUsage)
-    }
-    // MID/SUP向けのローム（終盤でも有効）
-    if (position === 'MID' || position === 'SUP') {
-      addSection('ローム', MACRO_TEXTBOOK.roaming)
-    }
-    addSection('エルダードラゴン', MACRO_TEXTBOOK.elderDragon)
-    addSection('バロンベイト', MACRO_TEXTBOOK.baronBait)
-    addSection('インヒビター優先順位', MACRO_TEXTBOOK.inhibitorPriority)
-    addSection('ベースレース判断', MACRO_TEXTBOOK.baseRaceDecision)
-    addSection('デスタイマー活用', MACRO_TEXTBOOK.deathTimerAbuse)
-  }
-
-  // ── 常に有用な知識 ──
-  addSection('パワースパイク追跡', MACRO_TEXTBOOK.powerSpikeTracking)
-  addSection('ゴールドリードの解釈', MACRO_TEXTBOOK.goldLeadInterpretation)
-  addSection('カムバックゴールド', MACRO_TEXTBOOK.comebackGoldMechanics)
-  addSection('サモナースペル追跡', MACRO_TEXTBOOK.summonerSpellTracking)
-  addSection('アビリティCD活用', MACRO_TEXTBOOK.abilityCooldownWindows)
-  addSection('コミュニケーション', MACRO_TEXTBOOK.communication)
-
-  // ── 優勢時にタワーダイブの知識を追加 ──
-  if (killDiff >= 2) {
-    addSection('タワーダイブ', MACRO_TEXTBOOK.towerDiving)
-    addSection('タワーアグロ管理', MACRO_TEXTBOOK.towerAggroManagement)
   }
 
   return lines.join('\n')

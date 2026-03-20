@@ -113,7 +113,7 @@ class OllamaProvider {
         }
         content = JSON.stringify(parsed)
       } catch {
-        // JSONパース失敗 → そのまま返す (claudeApi側でfallback)
+        // JSONパース失敗 → そのまま返す (aiClient側でfallback)
       }
     }
 
