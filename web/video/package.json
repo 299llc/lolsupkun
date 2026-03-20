@@ -1,0 +1,15 @@
+{
+  "name": "lol-build-advisor-promo",
+  "version": "1.0.0",
+  "description": "Promotional video for LoL Build Advisor (ろるさぽくん)",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render PromoVideo out/promo.mp4"
+  },
+  "dependencies": {
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "remotion": "^4.0.237",
+    "@remotion/cli": "^4.0.237"
+  }
+}
