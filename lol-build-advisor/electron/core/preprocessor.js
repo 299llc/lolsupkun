@@ -760,7 +760,7 @@ class Preprocessor {
     else if (tags.includes('Marksman')) powerSpikes.push('Lv2', '1アイテム', '3アイテム')
     else powerSpikes.push('Lv2', 'Lv6(R)', '2アイテム')
 
-    return {
+    const result = {
       me: {
         champion: gameState.me.champion,
         role: gameState.me.position,
@@ -775,6 +775,38 @@ class Preprocessor {
       },
       matchup_difficulty: 'medium'
     }
+
+    // BOTレーン（ADC/SUP）の場合: 2v2情報を追加
+    const isBotLane = myPosition === 'ADC' || myPosition === 'SUP'
+    if (isBotLane) {
+      // 味方パートナーを特定
+      const partnerRole = myPosition === 'ADC' ? 'SUP' : 'ADC'
+      const partner = gameState.allies.find(a => normalizePosition(a.position) === partnerRole)
+      if (partner) {
+        const partnerSpells = getSpells(partner.enName)
+        result.lane_partner = {
+          champion: partner.champion,
+          role: partner.position,
+          skills: formatSkills(partnerSpells)
+        }
+      }
+
+      // 敵パートナーを特定
+      const opponentPartnerRole = opponent.position === 'ADC' ? 'SUP' : 'ADC'
+      const opponentPartner = gameState.enemies.find(e =>
+        normalizePosition(e.position) === opponentPartnerRole && e !== opponent
+      )
+      if (opponentPartner) {
+        const opPartnerSpells = getSpells(opponentPartner.enName)
+        result.opponent_partner = {
+          champion: opponentPartner.champion,
+          role: opponentPartner.position,
+          skills: formatSkills(opPartnerSpells)
+        }
+      }
+    }
+
+    return result
   }
 
   /**
