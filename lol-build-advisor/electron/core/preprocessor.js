@@ -124,6 +124,37 @@ function judgeCcLevel(enemies) {
 /**
  * チーム構成タイプを推定する（engage/poke/split/scale）
  */
+const TIER_NAMES = { P3: 'outer', P2: 'inner', P1: 'inhib', P4: 'nexus', P5: 'nexus' }
+const LANE_NAMES = { L0: 'bot', L1: 'mid', L2: 'top' }
+
+function buildTowerStatus(events, myTeam) {
+  const allyLost = { top: [], mid: [], bot: [] }
+  const enemyLost = { top: [], mid: [], bot: [] }
+  for (const e of events) {
+    if (e.EventName !== 'TurretKilled') continue
+    const turret = e.TurretKilled || ''
+    // レーン判定
+    const laneMatch = turret.match(/_(L[012])_/)
+    if (!laneMatch) continue
+    const lane = LANE_NAMES[laneMatch[1]]
+    if (!lane) continue
+    // ティア判定
+    const tierMatch = turret.match(/_(P[1-5])_/)
+    if (!tierMatch) continue
+    const tier = TIER_NAMES[tierMatch[1]]
+    if (!tier) continue
+    // どちら側のタワーか
+    const isOrderTurret = turret.includes('TOrder')
+    const isChaos = turret.includes('TChaos')
+    if (!isOrderTurret && !isChaos) continue
+    // Order側タワーが壊れた → Orderチームが失った
+    const losingTeam = isOrderTurret ? 'ORDER' : 'CHAOS'
+    const target = losingTeam === myTeam ? allyLost : enemyLost
+    if (!target[lane].includes(tier)) target[lane].push(tier)
+  }
+  return { ally_lost: allyLost, enemy_lost: enemyLost }
+}
+
 function estimateComposition(players) {
   let engage = 0, poke = 0, split = 0, scale = 0
   for (const p of players) {
@@ -389,7 +420,8 @@ class Preprocessor {
         fedPlayers: allyFedPlayers
       },
       objectives,
-      laneState
+      laneState,
+      towers: buildTowerStatus(events, myTeam)
     }
   }
 
@@ -590,6 +622,7 @@ class Preprocessor {
         herald: gameState.objectives.herald,
         voidgrub: gameState.objectives.voidgrub
       },
+      towers: gameState.towers,
       lane_state: gameState.laneState,
       ally_composition: gameState.ally.composition,
       enemy_threats: gameState.enemy.threats,
