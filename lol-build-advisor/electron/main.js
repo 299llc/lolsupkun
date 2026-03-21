@@ -4,8 +4,10 @@ const fs = require('fs')
 const { LiveClientPoller } = require('./api/liveClient')
 const { AiClient } = require('./api/aiClient')
 const { OllamaProvider } = require('./api/providers/ollamaProvider')
+const { BedrockProvider } = require('./api/providers/bedrockProvider')
+const { AnthropicProvider } = require('./api/providers/anthropicProvider')
+const { GeminiProvider } = require('./api/providers/geminiProvider')
 const { OllamaSetup } = require('./api/ollamaSetup')
-const { LicenseManager } = require('./api/licenseManager')
 const { ContextBuilder, extractEnName } = require('./api/contextBuilder')
 const { DiffDetector } = require('./api/diffDetector')
 const { setCacheDir, initPatchData, getVersion, getChampionById, getItemById, getSpells, loadSpellsForMatch, refreshCache, formatItemSummary } = require('./api/patchData')
@@ -18,7 +20,32 @@ const { buildMatchChampionKnowledge } = require('./core/knowledgeDb')
 const { MACRO_INTERVAL_MS, MACRO_DEBOUNCE_MS, COUNTER_ITEMS, ITEM_COMPLETE_GOLD, ITEM_BOOT_GOLD, DEFAULT_WINDOW, DDRAGON_BASE, POLL_INTERVAL_MS, isCompletedItem, classifyObjectiveEvents } = require('./core/config')
 const { SessionRecorder } = require('./core/sessionRecorder')
 const { GameLogger } = require('./core/gameLogger')
-const { AdManager } = require('./api/adManager')
+const { Preprocessor } = require('./core/preprocessor')
+const { Postprocessor } = require('./core/postprocessor')
+
+// ── .env 読み込み ────────────────────────────────
+function loadEnv() {
+  try {
+    const envPath = path.join(__dirname, '..', '.env')
+    const content = fs.readFileSync(envPath, 'utf-8')
+    const env = {}
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+      const eqIdx = trimmed.indexOf('=')
+      if (eqIdx < 0) continue
+      const key = trimmed.substring(0, eqIdx).trim()
+      let value = trimmed.substring(eqIdx + 1).trim()
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1)
+      }
+      env[key] = value
+    }
+    return env
+  } catch {
+    return {}
+  }
+}
 
 // ── ゲームロガー（console.log フック）──────────────
 const gameLogger = new GameLogger(app.getPath('userData'))
@@ -44,6 +71,8 @@ const state = {
   lcuClient: null,
   aiEnabled: false,
   aiPending: false,
+  claudeModel: null,         // .env CLAUDE_MODEL (macro/suggestion用)
+  claudeQualityModel: null,  // .env CLAUDE_QUALITY_MODEL (matchup/coaching用)
 
   // 試合状態
   lastSuggestion: null,
@@ -67,6 +96,8 @@ const state = {
   lastMacroTime: 0,
   macroPending: false,
   lastObjectiveCount: 0,
+  lastTurretCount: 0,
+  _lastMacroFingerprint: null,
 
   // 最後に送信したデータ（コンパクトウィンドウ再送用）
   lastMacroAdvice: null,
@@ -89,8 +120,6 @@ const state = {
 
   // ルールエンジン
   ruleEngine: null,
-  // ライセンス
-  licenseManager: null,
 
   // 観戦
   spectatorSelectedName: null,
@@ -100,6 +129,11 @@ const state = {
 
   // セッションレコーダー
   recorder: null,
+
+  // 3層パイプライン
+  preprocessor: new Preprocessor(),
+  postprocessor: new Postprocessor(),
+  currentGameState: null,
 }
 
 // ── 設定 ──────────────────────────────────────────
@@ -167,8 +201,6 @@ function createWindow() {
 
   state.isDev = !app.isPackaged
   state.aiEnabled = settings.aiEnabled ?? false
-  const onTop = settings.onTop ?? true
-
   state.mainWindow = new BrowserWindow({
     width: saved.width || DEFAULT_WINDOW.width,
     height: saved.height || DEFAULT_WINDOW.height,
@@ -176,7 +208,6 @@ function createWindow() {
     y: saved.y,
     frame: false,
     transparent: true,
-    alwaysOnTop: onTop,
     resizable: true,
     skipTaskbar: false,
     hasShadow: false,
@@ -186,8 +217,6 @@ function createWindow() {
       nodeIntegration: false
     }
   })
-
-  state.mainWindow.setAlwaysOnTop(onTop, onTop ? 'screen-saver' : 'normal')
   state.mainWindow.on('moved', saveWindowState)
   state.mainWindow.on('resized', saveWindowState)
 
@@ -218,6 +247,7 @@ function toggleCompactWindow() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
+    focusable: false,
     resizable: true,
     skipTaskbar: false,
     hasShadow: false,
@@ -245,9 +275,10 @@ function toggleCompactWindow() {
     state.mainWindow?.webContents.send('compact:status', false)
   })
 
-  // 読み込み完了後に既存データを再送
+  // 読み込み完了後に既存データを再送 + クリックスルー有効化
   state.compactWindow.webContents.on('did-finish-load', () => {
     sendStateToCompactWindow()
+    state.compactWindow?.setIgnoreMouseEvents(true, { forward: true })
   })
 
   if (state.isDev) {
@@ -278,6 +309,7 @@ function broadcast(channel, data) {
   else if (channel === 'substitute:items') state.lastSubstituteItems = data
   else if (channel === 'core:build') state.lastCoreBuildMsg = data
   else if (channel === 'game:status') state.lastGameStatus = data
+  else if (channel === 'champselect:extras') state.lastChampSelectExtras = data
 
   state.mainWindow?.webContents.send(channel, data)
   state.compactWindow?.webContents.send(channel, data)
@@ -294,6 +326,7 @@ function sendStateToCompactWindow() {
   if (state.lastSubstituteItems) cw.webContents.send('substitute:items', state.lastSubstituteItems)
   if (state.lastMatchupTip) cw.webContents.send('matchup:tip', state.lastMatchupTip)
   if (state.lastMacroAdvice) cw.webContents.send('macro:advice', state.lastMacroAdvice)
+  if (state.lastChampSelectExtras) cw.webContents.send('champselect:extras', state.lastChampSelectExtras)
 }
 
 // ── デバッグログ ──────────────────────────────────
@@ -320,15 +353,31 @@ function setupIPC() {
   ipcMain.handle('compact:status', () => !!state.compactWindow)
   ipcMain.on('compact:minimize', () => state.compactWindow?.minimize())
   ipcMain.on('compact:close', () => state.compactWindow?.close())
+  ipcMain.on('compact:set-passthrough', (_, enabled) => {
+    state.compactWindow?.setIgnoreMouseEvents(enabled, { forward: true })
+  })
 
   const keyPath = path.join(app.getPath('userData'), '.api-key')
+
+  const _modelOpts = (providerType) => {
+    if (providerType === 'gemini') {
+      return {
+        ...(state.geminiModel && { model: state.geminiModel }),
+        ...(state.geminiQualityModel && { qualityModel: state.geminiQualityModel }),
+      }
+    }
+    return {
+      ...(state.claudeModel && { model: state.claudeModel }),
+      ...(state.claudeQualityModel && { qualityModel: state.claudeQualityModel }),
+    }
+  }
 
   ipcMain.handle('apikey:get', () => {
     try { return fs.readFileSync(keyPath, 'utf-8') } catch { return '' }
   })
   ipcMain.handle('apikey:set', (_, key) => {
     fs.writeFileSync(keyPath, key, 'utf-8')
-    state.aiClient = new AiClient(key)
+    state.aiClient = new AiClient(key, _modelOpts())
     return true
   })
   ipcMain.handle('apikey:validate', async (_, key) => {
@@ -342,21 +391,59 @@ function setupIPC() {
     const provider = new OllamaProvider(opts || {})
     const ok = await provider.validate()
     if (!ok) return { success: false, error: 'Ollama に接続できません。ollama が起動しているか確認してください。' }
-    state.aiClient = new AiClient(provider)
+    state.aiClient = new AiClient(provider, _modelOpts())
     saveSetting('provider', { type: 'ollama', baseUrl: provider.baseUrl, model: provider.defaultModel })
     return { success: true, model: provider.defaultModel || 'auto' }
   })
 
-  ipcMain.handle('provider:set-anthropic', async (_, key) => {
-    fs.writeFileSync(keyPath, key, 'utf-8')
-    state.aiClient = new AiClient(key)
+  ipcMain.handle('provider:set-anthropic', async () => {
+    const env = loadEnv()
+    const key = env.ANTHROPIC_API_KEY
+    if (!key) {
+      return { success: false, error: 'ANTHROPIC_API_KEY が .env に見つかりません' }
+    }
+    const provider = new AnthropicProvider(key)
+    const ok = await provider.validate()
+    if (!ok) return { success: false, error: 'Anthropic API 接続に失敗しました' }
+    state.aiClient = new AiClient(provider, _modelOpts())
     saveSetting('provider', { type: 'anthropic' })
+    return { success: true }
+  })
+
+  ipcMain.handle('provider:set-gemini', async () => {
+    const env = loadEnv()
+    const key = env.GEMINI_API_KEY
+    if (!key) {
+      return { success: false, error: 'GEMINI_API_KEY が .env に見つかりません' }
+    }
+    const provider = new GeminiProvider(key)
+    const ok = await provider.validate()
+    if (!ok) return { success: false, error: 'Gemini API 接続に失敗しました' }
+    state.aiClient = new AiClient(provider, _modelOpts('gemini'))
+    saveSetting('provider', { type: 'gemini' })
+    return { success: true }
+  })
+
+  ipcMain.handle('provider:set-bedrock', async () => {
+    const env = loadEnv()
+    const region = env.AWS_REGION || 'us-east-1'
+    const apiKey = env.BEDROCK_API_KEY
+    const accessKeyId = env.AWS_ACCESS_KEY_ID
+    const secretAccessKey = env.AWS_SECRET_ACCESS_KEY
+    if (!apiKey && (!accessKeyId || !secretAccessKey)) {
+      return { success: false, error: 'AWS認証情報が .env に見つかりません' }
+    }
+    const provider = new BedrockProvider({ apiKey, region, accessKeyId, secretAccessKey })
+    const ok = await provider.validate()
+    if (!ok) return { success: false, error: 'Bedrock 接続に失敗しました' }
+    state.aiClient = new AiClient(provider, _modelOpts())
+    saveSetting('provider', { type: 'bedrock', region })
     return { success: true }
   })
 
   ipcMain.handle('provider:get', () => {
     const settings = loadSettings()
-    return settings.provider || { type: 'anthropic' }
+    return settings.provider || { type: 'ollama' }
   })
 
   ipcMain.handle('ollama:models', async (_, baseUrl) => {
@@ -433,39 +520,10 @@ function setupIPC() {
     return { success: ready }
   })
 
-  // ── ライセンス管理 ──
-  ipcMain.handle('license:status', () => {
-    return state.licenseManager?.getStatus() || { tier: 'free', remainingGames: 0 }
-  })
-
-  ipcMain.handle('license:verify', async (_, key) => {
-    if (!state.licenseManager) return { valid: false, error: 'LicenseManager not initialized' }
-    return state.licenseManager.verifyLicense(key)
-  })
-
-  ipcMain.handle('license:clear', () => {
-    state.licenseManager?.clearLicense()
-    return { tier: 'free' }
-  })
-
-  // ── 広告 ──
-  const adManager = new AdManager()
-  ipcMain.handle('ad:get', async () => {
-    const status = state.licenseManager?.getStatus()
-    if (status?.tier === 'pro') return null
-    return adManager.pickAd()
-  })
-
   ipcMain.handle('polling:start', () => startPolling())
   ipcMain.handle('polling:stop', () => stopPolling())
   ipcMain.handle('ai:toggle', (_, enabled) => { state.aiEnabled = enabled; saveSetting('aiEnabled', enabled); return state.aiEnabled })
   ipcMain.handle('ai:status', () => state.aiEnabled)
-  ipcMain.handle('ontop:toggle', (_, enabled) => {
-    state.mainWindow?.setAlwaysOnTop(enabled, enabled ? 'screen-saver' : 'normal')
-    saveSetting('onTop', enabled)
-    return enabled
-  })
-  ipcMain.handle('ontop:status', () => state.mainWindow?.isAlwaysOnTop() ?? true)
 
   ipcMain.handle('ai:logs', () => state.aiClient?.getLogs() || [])
   ipcMain.handle('ai:clearLogs', () => { state.aiClient?.clearLogs(); return true })
@@ -580,6 +638,10 @@ function resetBuildState() {
   if (state.aiClient) state.aiClient.clearMatch()
   // ルールエンジンリセット
   if (state.ruleEngine) state.ruleEngine.reset()
+  // パイプラインリセット
+  state.preprocessor.reset()
+  state.postprocessor.reset()
+  state.currentGameState = null
   // Renderer側もクリア
   if (state.mainWindow) {
     state.mainWindow.webContents.send('core:build', null)
@@ -614,24 +676,42 @@ async function requestMacroAdvice(gameData, me, allies, enemies) {
   broadcast('macro:loading', true)
 
   try {
-    const staticCtx = buildMacroStaticContext(me, allies, enemies)
-    const dynamicCtx = buildMacroDynamicContext(gameData, me, allies, enemies)
+    const gameState = state.currentGameState
     const events = gameData.events?.Events || []
     const gameTime = gameData.gameData?.gameTime || 0
-    const availableObjectives = getAvailableObjectiveNames(events, gameTime)
-    let advice = await state.aiClient.getMacroAdvice(staticCtx, dynamicCtx, availableObjectives)
 
-    // バリデーション: LLMの出力が使えるか検証
-    if (advice && typeof advice === 'object') {
-      // title/descが欠けている場合は無効
-      if (!advice.title || !advice.desc) {
-        macroLog(`Validation failed: missing title/desc - ${JSON.stringify(advice).substring(0, 200)}`)
-        advice = null
-      }
+    // 前処理: 構造化入力を生成
+    const structuredInput = state.preprocessor.buildMacroInput(gameState, events)
+
+    // 状況未変化ならスキップ（コスト削減）
+    const deadEnemies = (structuredInput.enemies || []).filter(e => e.isDead).map(e => e.champion).join(',')
+    const macroFingerprint = `${structuredInput.game_phase}|${structuredInput.situation}|${structuredInput.kill_diff}|${structuredInput.action_candidates.map(c => c.action).join(',')}|${JSON.stringify(structuredInput.objectives)}|${JSON.stringify(structuredInput.towers)}|${deadEnemies}`
+    if (macroFingerprint === state._lastMacroFingerprint) {
+      macroLog(`Skipped: situation unchanged`)
+      state.macroPending = false
+      broadcast('macro:loading', false)
+      return
     }
+    state._lastMacroFingerprint = macroFingerprint
+
+    console.log(`[Pipeline] Macro input: phase=${structuredInput.game_phase} situation=${structuredInput.situation} actions=${structuredInput.action_candidates.map(c => c.action).join(',')}`)
+
+    // staticContextはcache_control用に引き続き使う
+    const staticCtx = buildMacroStaticContext(me, allies, enemies)
+
+    // 推論
+    let rawResult = await state.aiClient.getMacroAdvice(staticCtx, structuredInput)
+
+    // 後処理
+    const actionCandidates = structuredInput.action_candidates.map(c => c.action)
+    const previousResult = state.postprocessor.lastMacroResult
+    const advice = state.postprocessor.processMacroResult(rawResult, actionCandidates, previousResult)
 
     if (advice) {
-      macroLog(`Raw: ${JSON.stringify(advice).substring(0, 300)}`)
+      // 次回フィードバック用に保存
+      state.preprocessor.setMacroAdvice(advice)
+
+      macroLog(`[Pipeline] Processed: ${JSON.stringify(advice).substring(0, 300)}`)
       advice.gameTime = gameTime
       broadcast('macro:advice', advice)
       macroLog(`Sent: ${advice.title}`)
@@ -643,9 +723,9 @@ async function requestMacroAdvice(gameData, me, allies, enemies) {
         const top = ruleAlerts[0]
         const fallback = { title: top.title, desc: top.desc, warning: top.warning || '', gameTime, _fallback: true }
         broadcast('macro:advice', fallback)
-        macroLog(`Fallback to ruleEngine: ${top.title}`)
+        macroLog(`[Pipeline] Fallback to ruleEngine: ${top.title}`)
       } else {
-        macroLog('API returned null, no ruleEngine fallback available')
+        macroLog('[Pipeline] Postprocessor returned null, no ruleEngine fallback available')
       }
     }
   } catch (err) {
@@ -668,170 +748,59 @@ async function requestCoaching(snapshot) {
   if (!state.aiClient || !snapshot) return
 
   const { players, gameData: gd } = snapshot
-  const { me, allies, enemies } = players || {}
+  const { me } = players || {}
   if (!me) return
 
-  const gameTime = gd?.gameTime || 0
-  const minutes = Math.floor(gameTime / 60)
-  const myItems = (me.items || []).filter(i => i.itemID > 0).map(i => i.displayName).join(', ')
-  const myKDA = me.scores ? `${me.scores.kills}/${me.scores.deaths}/${me.scores.assists}` : '不明'
-  const myCS = me.scores?.creepScore || 0
-
-  const allAllies = [me, ...(allies || [])]
-  const allyKills = allAllies.reduce((s, p) => s + (p.scores?.kills || 0), 0)
-  const enemyKills = (enemies || []).reduce((s, p) => s + (p.scores?.kills || 0), 0)
-  const myKillParticipation = allyKills > 0
-    ? Math.round(((me.scores?.kills || 0) + (me.scores?.assists || 0)) / allyKills * 100) : 0
-
-  const formatPlayer = (p) => {
-    const items = (p.items || []).filter(i => i.itemID > 0).map(i => i.displayName).join(', ')
-    const kda = p.scores ? `${p.scores.kills}/${p.scores.deaths}/${p.scores.assists}` : '?'
-    const cs = p.scores?.creepScore || 0
-    const csPerMin = minutes > 0 ? (cs / minutes).toFixed(1) : '0'
-    const ward = p.scores?.wardScore != null ? ` ワード:${Math.round(p.scores.wardScore)}` : ''
-    const flags = p.flags?.length ? ` [${p.flags.join(',')}]` : ''
-    return `${p.championName} (${p.position || '?'}) KDA:${kda} CS:${cs}(${csPerMin}/min)${ward} Lv${p.level} ${items}${flags}`
-  }
-
-  // --- チャンプスキル情報を構築 ---
-  const champSkillLines = []
-  const allPlayers = [me, ...(allies || []), ...(enemies || [])]
-  for (const p of allPlayers) {
-    const spells = getSpells(p.enName)
-    if (!spells) continue
-    const skillTexts = spells.spells.map(s => `${s.key}:${s.name}(${s.desc.substring(0, 40)})`).join(' ')
-    champSkillLines.push(`${p.championName}: ${skillTexts}`)
-  }
-
-  // --- 試合に登場したアイテム辞書を構築 ---
-  const itemIds = new Set()
-  // 全プレイヤーのアイテムを収集
-  for (const p of allPlayers) {
-    for (const item of (p.items || [])) {
-      if (item.itemID > 0) itemIds.add(String(item.itemID))
-    }
-  }
-  // コアビルドのアイテムも追加
-  if (state.currentCoreBuild?.ids) {
-    for (const id of state.currentCoreBuild.ids) itemIds.add(String(id))
-  }
-  // カウンターアイテム候補も追加（敵フラグに応じて）
-  const enemyFlags = new Set()
-  for (const e of (enemies || [])) {
-    for (const f of (e.flags || [])) enemyFlags.add(f)
-  }
-  for (const [flag, ids] of Object.entries(COUNTER_ITEMS)) {
-    if (enemyFlags.has(flag)) {
-      for (const id of ids) itemIds.add(String(id))
-    }
-  }
-  // アイテム辞書テキスト生成
-  const itemDictLines = []
-  for (const id of itemIds) {
-    const summary = formatItemSummary(id)
-    if (!summary || summary.gold < 400) continue // 素材アイテムの詳細説明は省略
-    itemDictLines.push(`${summary.name}(${summary.gold}G): ${summary.stats} / ${summary.desc}`)
-  }
-
-  const isLocal = state.aiClient?.isLocalLLM?.()
-
-  const lines = [
-    // ローカルLLMでは参照データを省略（コンテキストが大きすぎるとフォーマット指示を忘れる）
-    ...(!isLocal ? [
-      `【参照: チャンピオンスキル情報】`,
-      ...champSkillLines,
-      '',
-      `【参照: アイテム辞書】`,
-      ...itemDictLines,
-      '',
-    ] : []),
-    `=== 以下の試合データを評価してください ===`,
-    `試合時間: ${minutes}分`,
-    ...(state.aiClient?.rank ? [`プレイヤーランク: ${state.aiClient.rank}`] : []),
-    '',
-    `【自分】${me.championName} (${me.position || '?'})`,
-    `KDA: ${myKDA}`,
-    `CS: ${myCS} (${minutes > 0 ? (myCS / minutes).toFixed(1) : 0}/min)`,
-    `レベル: ${me.level}`,
-    `ワードスコア: ${me.scores?.wardScore != null ? Math.round(me.scores.wardScore) : '不明'}`,
-    `アイテム: ${myItems || 'なし'}`,
-    '',
-    ...(state.currentCoreBuild ? [`【推奨コアビルド(OP.GG統計)】${state.currentCoreBuild.names.join(', ')}`, ''] : []),
-    `チームキル: 味方${allyKills} vs 敵${enemyKills}`,
-    `キル参加率: ${myKillParticipation}%`,
-    '',
-    `【味方チーム】`,
-    ...(allies || []).map(formatPlayer),
-    '',
-    `【敵チーム】`,
-    ...(enemies || []).map(formatPlayer),
-    '',
-    // イベントタイムライン（キル/オブジェクト）を追加
-    ...(() => {
-      const events = gd?.events?.Events || snapshot.events?.Events || []
-      const timeline = []
-      for (const ev of events) {
-        const t = Math.floor(ev.EventTime || 0)
-        const min = Math.floor(t / 60)
-        const sec = String(t % 60).padStart(2, '0')
-        const time = `${min}:${sec}`
-        if (ev.EventName === 'ChampionKill') {
-          const assists = ev.Assisters?.length ? ` (アシスト: ${ev.Assisters.join(', ')})` : ''
-          timeline.push(`${time} キル: ${ev.KillerName} → ${ev.VictimName}${assists}`)
-        } else if (ev.EventName === 'DragonKill') {
-          const stolen = ev.Stolen ? ' [スティール]' : ''
-          timeline.push(`${time} ドラゴン討伐: ${ev.KillerName}${stolen}`)
-        } else if (ev.EventName === 'BaronKill') {
-          const stolen = ev.Stolen ? ' [スティール]' : ''
-          timeline.push(`${time} バロン討伐: ${ev.KillerName}${stolen}`)
-        } else if (ev.EventName === 'HeraldKill') {
-          timeline.push(`${time} ヘラルド討伐: ${ev.KillerName}`)
-        } else if (ev.EventName === 'TurretKilled') {
-          timeline.push(`${time} タワー破壊: ${ev.TurretKilled}`)
-        } else if (ev.EventName === 'InhibKilled') {
-          timeline.push(`${time} インヒビター破壊: ${ev.InhibKilled}`)
-        }
-      }
-      if (timeline.length === 0) return []
-      // 最大30イベント（直近を優先）
-      const recent = timeline.length > 30 ? timeline.slice(-30) : timeline
-      return ['【試合タイムライン】', ...recent, '']
-    })(),
-    `上記の試合データを評価してJSONのみ返答してください。`
-  ]
-
-  console.log('[Coaching] Requesting post-game evaluation...')
+  console.log('[Pipeline] Requesting coaching evaluation...')
   broadcast('coaching:loading', true)
 
   try {
-    const result = await state.aiClient.getCoaching(lines.join('\n'))
+    // GameStateが残っていなければsnapshotから再構築
+    const gameState = state.currentGameState || state.preprocessor.buildGameState(
+      { activePlayer: snapshot.activePlayer, allPlayers: snapshot.allPlayers || [me, ...(players.allies || []), ...(players.enemies || [])], gameData: gd },
+      gd?.events?.Events || [],
+      { spectatorSelectedName: state.spectatorSelectedName || null }
+    )
+
+    const events = gd?.events?.Events || []
+    const coreBuild = state.currentCoreBuild
+      ? state.currentCoreBuild.ids.map((id, i) => ({ id, name: state.currentCoreBuild.names[i] }))
+      : []
+
+    // 前処理: 構造化入力を生成
+    const structuredInput = state.preprocessor.buildCoachingInput(gameState, state.preprocessor.gameLog, coreBuild, events)
+    console.log(`[Pipeline] Coaching input: duration=${structuredInput.game_duration}s phase=${structuredInput.game_phase_final} snapshots=${structuredInput.snapshot_count}`)
+
+    // 推論
+    const rawResult = await state.aiClient.getCoaching(structuredInput)
+
+    // 後処理
+    const result = state.postprocessor.processCoachingResult(rawResult)
+
     if (result) {
-      console.log(`[Coaching] Raw keys: ${Object.keys(result).join(', ')}`)
-      console.log(`[Coaching] Raw JSON: ${JSON.stringify(result).substring(0, 500)}`)
-      console.log(`[Coaching] Score: ${result.overall_score}/10 Build: ${result.build_score || '?'}/10`)
+      console.log(`[Pipeline] Coaching processed: score=${result.overall_score}/10 build=${result.build_score}/10`)
       if (result.sections) {
         for (const s of result.sections) {
-          console.log(`[Coaching] [${s.grade || '?'}] ${s.title}: ${(s.content || '').substring(0, 120)}`)
+          console.log(`[Pipeline] Coaching [${s.grade || '?'}] ${s.title}: ${(s.content || '').substring(0, 120)}`)
         }
       }
       if (result.good_points) {
-        result.good_points.forEach((p, i) => console.log(`[Coaching] Good${i+1}: ${p.substring(0, 120)}`))
+        result.good_points.forEach((p, i) => console.log(`[Pipeline] Coaching Good${i+1}: ${p.substring(0, 120)}`))
       }
       if (result.improve_points) {
-        result.improve_points.forEach((p, i) => console.log(`[Coaching] Improve${i+1}: ${p.substring(0, 120)}`))
+        result.improve_points.forEach((p, i) => console.log(`[Pipeline] Coaching Improve${i+1}: ${p.substring(0, 120)}`))
       }
       if (result.next_game_advice) {
-        console.log(`[Coaching] NextGame: ${result.next_game_advice.substring(0, 150)}`)
+        console.log(`[Pipeline] Coaching NextGame: ${result.next_game_advice.substring(0, 150)}`)
       }
       broadcast('coaching:result', result)
       saveLastGame(snapshot, result)
     } else {
-      console.error('[Coaching] No result returned')
+      console.error('[Pipeline] Coaching postprocessor returned null')
       saveLastGame(snapshot, null)
     }
   } catch (err) {
-    console.error('[Coaching] Error:', err.message)
-    // エラー時も試合データを保存（古いコーチング結果が残らないように）
+    console.error('[Pipeline] Coaching error:', err.message)
     saveLastGame(snapshot, null)
   } finally {
     broadcast('coaching:loading', false)
@@ -1342,6 +1311,15 @@ async function handleGameData(gameData) {
     gameData.events.Events = events
   }
 
+  // GameState構築（毎ポーリング）
+  const gameState = state.preprocessor.buildGameState(gameData, events, {
+    spectatorSelectedName: isSpectator ? state.spectatorSelectedName : null
+  })
+  state.currentGameState = gameState
+
+  // 60秒間隔でスナップショット蓄積（コーチング用）
+  state.preprocessor.recordSnapshot(gameState, gt)
+
   // AI提案
   handleAiSuggestion(gameData)
 
@@ -1446,7 +1424,11 @@ function handleCoreBuild(me, resolvedPosition) {
   if (!state.coreBuildLoaded && me.enName && resolvedPosition) {
     state.coreBuildLoaded = true
     console.log(`[CoreBuild] Loading for ${me.enName} ${resolvedPosition}...`)
-    loadCoreBuild(me.enName, resolvedPosition).catch(err => {
+    loadCoreBuild(me.enName, resolvedPosition).then(analysis => {
+      if (analysis?.skills) {
+        broadcast('champselect:extras', { skills: analysis.skills, ddragon: state.ddragonBase })
+      }
+    }).catch(err => {
       console.error(`[CoreBuild] Failed: ${err.message}`)
       state.coreBuildLoaded = false
     })
@@ -1524,36 +1506,40 @@ function handleMatchupTip(me, resolvedPosition, enemies) {
   if (!laneOpponent) return
 
   state.matchupTipLoaded = true
-  console.log(`[MatchupTip] Requesting: ${me.enName} vs ${laneOpponent.enName} (${resolvedPosition})`)
 
-  // ローカルLLM向け: スキル情報を追加してハルシネーション防止
-  const skillLines = []
-  if (state.aiClient?.isLocalLLM?.()) {
-    for (const champ of [me, laneOpponent]) {
-      const spells = getSpells(champ.enName)
-      if (spells) {
-        const passive = `パッシブ:${spells.passive.name}`
-        const skills = spells.spells.map(s => `${s.key}:${s.name}(${s.desc.substring(0, 60)})`).join(' ')
-        skillLines.push(`【${champ.championName}のスキル】${passive} ${skills}`)
-      }
-    }
+  const gameState = state.currentGameState
+  if (!gameState) {
+    console.warn('[Pipeline] MatchupTip: no gameState available, will retry')
+    state.matchupTipLoaded = false
+    return
   }
 
-  const tipContext = [
-    ...(skillLines.length > 0 ? [...skillLines, ''] : []),
-    `自分: ${me.championName} (${resolvedPosition})`,
-    `対面: ${laneOpponent.championName} (${laneOpponent.enName})`
-  ].join('\n')
-  state.aiClient.getMatchupTip(tipContext).then(tip => {
+  // 前処理: 構造化入力を生成
+  const spellData = getSpells(laneOpponent.enName)
+  const structuredInput = state.preprocessor.buildMatchupInput(gameState, spellData)
+  console.log(`[Pipeline] MatchupTip input: ${me.enName} vs ${structuredInput.opponent?.champion || '?'} (${resolvedPosition})`)
+
+  broadcast('matchup:loading', { loading: true, opponent: laneOpponent.championName })
+
+  state.aiClient.getMatchupTip(structuredInput).then(rawTip => {
+    // 後処理
+    const tip = state.postprocessor.processMatchupResult(rawTip, structuredInput.opponent)
+
     if (tip) {
       tip.opponent = laneOpponent.championName
+      tip.myChampion = me.championName
+      tip.mySkills = structuredInput.me?.skills || null
+      tip.opponentSkills = structuredInput.opponent?.skills || null
+      broadcast('matchup:loading', false)
       broadcast('matchup:tip', tip)
-      console.log(`[MatchupTip] ${me.enName} vs ${laneOpponent.enName}: ${tip.summary}`)
+      console.log(`[Pipeline] MatchupTip processed: ${me.enName} vs ${laneOpponent.enName}: ${tip.summary}`)
     } else {
-      console.warn('[MatchupTip] API returned null, will retry')
+      broadcast('matchup:loading', false)
+      console.warn('[Pipeline] MatchupTip postprocessor returned null, will retry')
       state.matchupTipLoaded = false
     }
   }).catch(err => {
+    broadcast('matchup:loading', false)
     if (err.authError) {
       console.error('[MatchupTip] Auth error - stopping retries. Check provider settings.')
       state.aiEnabled = false
@@ -1568,21 +1554,34 @@ function handleMatchupTip(me, resolvedPosition, enemies) {
 function handleAiSuggestion(gameData) {
   const triggered = state.diffDetector.check(gameData)
 
-  // 完成アイテム3個以上になるまでAI提案しない
-  const me = gameData.allPlayers?.find(p => p.summonerName === gameData.activePlayer?.summonerName)
-  const completedItems = (me?.items || []).filter(i => {
-    const patchItem = getItemById(String(i.itemID))
-    if (!patchItem) return false
-    return isCompletedItem(patchItem)
-  }).length
-  if (completedItems < 3) return
+  // 15分未満はAI提案しない
+  const gameTime = gameData.gameData?.gameTime || 0
+  if (gameTime < 900) return
 
   if ((triggered || !state.lastSuggestion) && !state.aiPending && state.aiClient && state.aiEnabled && state.currentCoreBuild) {
-    const context = state.contextBuilder.build(gameData)
+    const gameState = state.currentGameState
+    if (!gameState) return
+
+    // 前処理: 構造化入力を生成
+    const coreBuild = state.currentCoreBuild.ids.map((id, i) => ({ id, name: state.currentCoreBuild.names[i] }))
+    const substituteItems = state.aiClient.getSubstituteItems() || []
+    const structuredInput = state.preprocessor.buildItemInput(gameState, coreBuild, substituteItems)
+    const candidateIds = structuredInput.candidates.map(c => c.id)
+    console.log(`[Pipeline] Item input: candidates=[${candidateIds.join(',')}] situation=${structuredInput.situation}`)
+
     state.aiPending = true
     broadcast('ai:loading', true)
-    state.aiClient.getSuggestion(context).then(s => {
-      if (s) {
+    state.aiClient.getSuggestion(structuredInput).then(rawResult => {
+      // 後処理
+      const previousResult = state.postprocessor.lastItemResult
+      const processedResult = state.postprocessor.processItemResult(rawResult, candidateIds, previousResult)
+
+      if (processedResult) {
+        // 次回フィードバック用に保存
+        state.preprocessor.setItemAdvice(processedResult)
+
+        // UIに送るデータを整形
+        const s = { ...processedResult }
         if (s.recommended) {
           s.recommended = s.recommended.map(r => {
             const item = getItemById(String(r.id))
@@ -1590,9 +1589,12 @@ function handleAiSuggestion(gameData) {
           })
         }
         s.gameTime = gameData.gameData?.gameTime || 0
+        // 推薦蓄積（既存互換）
+        s.history = rawResult?.history || {}
+        s.totalCalls = rawResult?.totalCalls || 0
         state.lastSuggestion = s
         const recNames = (s.recommended || []).map(r => r.name || r.id).join(', ')
-        console.log(`[AiSuggestion] t=${Math.floor(s.gameTime)}s recommended=[${recNames}] reason=${(s.reasoning || '').substring(0, 80)}`)
+        console.log(`[Pipeline] Item processed: t=${Math.floor(s.gameTime)}s recommended=[${recNames}] reason=${(s.reasoning || '').substring(0, 80)}`)
         broadcast('ai:suggestion', s)
       }
       state.aiPending = false
@@ -1617,8 +1619,15 @@ function handleMacroAdvice(gameData, me, allies, enemies) {
   // オブジェクトキルイベント数(APIが返さない場合は0のまま → 時間ベーストリガーのみ)
   const objEvents = classifyObjectiveEvents(events)
   const objectiveCount = objEvents.dragon.length + objEvents.baron.length + objEvents.herald.length + objEvents.voidgrub.length
-  const objectiveTaken = objectiveCount > state.lastObjectiveCount
-  if (objectiveTaken) state.lastObjectiveCount = objectiveCount
+  const turretCount = events.filter(e => e.EventName === 'TurretKilled').length
+  const objectiveTaken = objectiveCount > state.lastObjectiveCount || turretCount > (state.lastTurretCount || 0)
+  if (objectiveCount > state.lastObjectiveCount) state.lastObjectiveCount = objectiveCount
+  if (turretCount > (state.lastTurretCount || 0)) state.lastTurretCount = turretCount
+
+  // キル/デス検出トリガー
+  const championKillCount = events.filter(e => e.EventName === 'ChampionKill').length
+  const killDeathOccurred = championKillCount > (state.lastChampionKillCount || 0)
+  if (championKillCount > (state.lastChampionKillCount || 0)) state.lastChampionKillCount = championKillCount
 
   const timeSinceLastMacro = now - state.lastMacroTime
 
@@ -1643,12 +1652,15 @@ function handleMacroAdvice(gameData, me, allies, enemies) {
   }
 
   const shouldMacro = timeSinceLastMacro >= MACRO_INTERVAL_MS ||
-    (objectiveTaken && timeSinceLastMacro >= MACRO_DEBOUNCE_MS) ||
-    objectivePreTrigger
+    objectiveTaken ||
+    objectivePreTrigger ||
+    (killDeathOccurred && timeSinceLastMacro >= MACRO_DEBOUNCE_MS)
 
   if (state.aiClient && state.aiEnabled && !state.macroPending && shouldMacro) {
     state.lastMacroTime = now
-    if (objectivePreTrigger) {
+    if (killDeathOccurred) {
+      macroLog(`Triggering macro advice (kill/death detected)`)
+    } else if (objectivePreTrigger) {
       macroLog(`Triggering macro advice (objective approaching: ${approachingObjs.join(', ')})`)
     } else {
       macroLog(`Triggering macro advice`)
@@ -1681,15 +1693,32 @@ if (!gotTheLock) {
     createWindow()
     setupIPC()
 
-    // ライセンスマネージャー初期化
-    // TODO: Gumroad プロダクトID を設定する (商品作成後に変更)
-    state.licenseManager = new LicenseManager(app.getPath('userData'), 'GUMROAD_PRODUCT_ID')
+    // .env からモデル設定を読み込み（プロバイダー別、ログは復元後に出力）
+    const env = loadEnv()
+    if (env.CLAUDE_MODEL) state.claudeModel = env.CLAUDE_MODEL
+    if (env.CLAUDE_QUALITY_MODEL) state.claudeQualityModel = env.CLAUDE_QUALITY_MODEL
+    if (env.GEMINI_MODEL) state.geminiModel = env.GEMINI_MODEL
+    if (env.GEMINI_QUALITY_MODEL) state.geminiQualityModel = env.GEMINI_QUALITY_MODEL
+
+    const _restoreModelOpts = (providerType) => {
+      if (providerType === 'gemini') {
+        return {
+          ...(state.geminiModel && { model: state.geminiModel }),
+          ...(state.geminiQualityModel && { qualityModel: state.geminiQualityModel }),
+        }
+      }
+      return {
+        ...(state.claudeModel && { model: state.claudeModel }),
+        ...(state.claudeQualityModel && { qualityModel: state.claudeQualityModel }),
+      }
+    }
+    const aiOpts = _restoreModelOpts()
 
     // プロバイダー復元 (Ollama or Anthropic)
     const savedProvider = loadSettings().provider
     if (savedProvider?.type === 'ollama') {
       const provider = new OllamaProvider({ baseUrl: savedProvider.baseUrl, model: savedProvider.model })
-      state.aiClient = new AiClient(provider)
+      state.aiClient = new AiClient(provider, aiOpts)
       console.log(`[Provider] Restored Ollama (model: ${savedProvider.model || 'auto'})`)
 
       // Ollama が起動していなければ自動起動
@@ -1705,17 +1734,26 @@ if (!gotTheLock) {
         }
       }).catch(() => {})
     } else if (savedProvider?.type === 'anthropic') {
-      // Anthropicプロバイダーが明示的に設定されている場合のみ
-      const keyPath = path.join(app.getPath('userData'), '.api-key')
-      try {
-        const key = fs.readFileSync(keyPath, 'utf-8')
-        if (key && key.startsWith('sk-ant-')) {
-          state.aiClient = new AiClient(key)
-          console.log('[Provider] Restored Anthropic')
-        } else {
-          console.log('[Provider] No valid Anthropic key found')
-        }
-      } catch {}
+      // Anthropicプロバイダー: .env の ANTHROPIC_API_KEY を使用
+      const key = env.ANTHROPIC_API_KEY
+      if (key) {
+        state.aiClient = new AiClient(new AnthropicProvider(key), aiOpts)
+        console.log('[Provider] Restored Anthropic from .env')
+        if (state.claudeModel) console.log(`[Config] model=${state.claudeModel}`)
+        if (state.claudeQualityModel) console.log(`[Config] qualityModel=${state.claudeQualityModel}`)
+      } else {
+        console.log('[Provider] No ANTHROPIC_API_KEY in .env')
+      }
+    } else if (savedProvider?.type === 'gemini') {
+      const key = env.GEMINI_API_KEY
+      if (key) {
+        state.aiClient = new AiClient(new GeminiProvider(key), _restoreModelOpts('gemini'))
+        console.log('[Provider] Restored Gemini from .env')
+        if (state.geminiModel) console.log(`[Config] model=${state.geminiModel}`)
+        if (state.geminiQualityModel) console.log(`[Config] qualityModel=${state.geminiQualityModel}`)
+      } else {
+        console.log('[Provider] No GEMINI_API_KEY in .env')
+      }
     } else {
       // プロバイダー未設定 → Ollamaが起動していれば自動接続
       console.log('[Provider] No provider configured. Trying auto-detect Ollama...')
@@ -1727,19 +1765,16 @@ if (!gotTheLock) {
           const qwen = models.find(m => m.name.includes('qwen'))
           const modelName = qwen?.name || models[0]?.name || 'qwen3.5:9b'
           autoProvider.defaultModel = modelName
-          state.aiClient = new AiClient(autoProvider)
+          state.aiClient = new AiClient(autoProvider, aiOpts)
           saveSetting('provider', { type: 'ollama', baseUrl: autoProvider.baseUrl, model: modelName })
           console.log(`[Provider] Auto-detected Ollama (model: ${modelName})`)
         } else {
-          // Ollamaも無い → 古いAPIキーを試す
-          const keyPath = path.join(app.getPath('userData'), '.api-key')
-          try {
-            const key = fs.readFileSync(keyPath, 'utf-8')
-            if (key && key.startsWith('sk-ant-')) {
-              state.aiClient = new AiClient(key)
-              console.log('[Provider] Fallback to Anthropic key')
-            }
-          } catch {}
+          // Ollamaも無い → .env の ANTHROPIC_API_KEY を試す
+          const anthropicKey = env.ANTHROPIC_API_KEY
+          if (anthropicKey) {
+            state.aiClient = new AiClient(new AnthropicProvider(anthropicKey), aiOpts)
+            console.log('[Provider] Fallback to Anthropic from .env')
+          }
           if (!state.aiClient) {
             console.log('[Provider] No provider available. Use Settings to set up Ollama.')
           }

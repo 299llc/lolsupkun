@@ -7,29 +7,38 @@
  * プロバイダー抽象化: AnthropicProvider (BYOK) / BedrockProvider (AWS) / OllamaProvider (ローカルLLM) を切り替え可能
  */
 const { ITEM_PROMPT, MATCHUP_PROMPT, MACRO_PROMPT, COACHING_PROMPT } = require('../core/prompts')
+const { buildFullGameKnowledgeText } = require('../core/knowledge/game')
 const {
   LOCAL_ITEM_STEP1_PROMPT, LOCAL_ITEM_STEP2_PROMPT,
   LOCAL_MATCHUP_STEP1_PROMPT, LOCAL_MATCHUP_STEP2_PROMPT,
   LOCAL_MACRO_STEP1_PROMPT, LOCAL_MACRO_STEP2_PROMPT,
   LOCAL_COACHING_STEP1_PROMPT, LOCAL_COACHING_STEP2_PROMPT,
 } = require('../core/localPrompts')
-const { buildKnowledgeContext, buildMacroKnowledge, getGamePhase } = require('../core/knowledgeDb')
+const { buildKnowledgeContext } = require('../core/knowledgeDb')
 const { AnthropicProvider } = require('./providers/anthropicProvider')
 
-const MODEL_HAIKU = 'claude-haiku-4-5-20251001'
-const MODEL_SONNET = 'claude-sonnet-4-6'
+const DEFAULT_MODELS = {
+  gemini: 'gemini-2.5-flash',
+  default: 'claude-haiku-4-5-20251001',
+}
 
 class AiClient {
   /**
    * @param {string|object} providerOrApiKey - API キー文字列 (後方互換) またはプロバイダーインスタンス
+   * @param {object} [opts] - オプション
+   * @param {string} [opts.model] - 高頻度呼び出し用モデル (macro/suggestion)
+   * @param {string} [opts.qualityModel] - 品質重視呼び出し用モデル (matchup/coaching)
    */
-  constructor(providerOrApiKey) {
+  constructor(providerOrApiKey, opts = {}) {
     if (typeof providerOrApiKey === 'string') {
       // 後方互換: API キー文字列が渡された場合は AnthropicProvider を自動生成
       this.provider = new AnthropicProvider(providerOrApiKey)
     } else {
       this.provider = providerOrApiKey
     }
+    const defaultModel = DEFAULT_MODELS[this.provider?.type] || DEFAULT_MODELS.default
+    this.model = opts.model || defaultModel
+    this.qualityModel = opts.qualityModel || defaultModel
     this.coreBuild = null
     this.substituteItems = []
     this.matchContext = null
@@ -43,9 +52,10 @@ class AiClient {
     this.rank = null  // プレイヤーのランクティア（ランク別アドバイス用）
     // 試合開始時に生成する10体のチャンプ教科書（試合中キャッシュ）
     this.championKnowledge = null
-    // マクロアドバイス会話セッション（Ollama用）
-    this._macroSession = null
-    this._macroSessionPhase = null
+    // 前回正常出力の保持（エラー時フォールバック用）
+    this.lastMatchupTip = null
+    this.lastMacroAdvice = null
+    this.lastCoaching = null
   }
 
   setCoreBuild(coreBuild) { this.coreBuild = coreBuild }
@@ -61,6 +71,30 @@ class AiClient {
   getProviderType() { return this.provider?.type || 'unknown' }
   isLocalLLM() { return this.provider?.type === 'ollama' }
 
+  /**
+   * Prompt Caching 用 system 配列を構築
+   * DOMAIN_KNOWLEDGE（不変） → taskPrompt → championKnowledge（試合中不変） → extraContext の順に配置し、
+   * 共通プレフィックスが Haiku 4.5 のキャッシュ閾値 (4096トークン) を超えるようにする
+   * @param {string} taskPrompt - タスク固有のプロンプト
+   * @param {string} [extraContext] - 追加の静的コンテキスト（チーム構成等、試合中不変）
+   */
+  _buildSystem(taskPrompt, extraContext) {
+    if (!this._gameKnowledgeText) {
+      this._gameKnowledgeText = buildFullGameKnowledgeText()
+    }
+    const blocks = [
+      { type: 'text', text: this._gameKnowledgeText, cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: taskPrompt, cache_control: { type: 'ephemeral' } },
+    ]
+    if (this.championKnowledge) {
+      blocks.push({ type: 'text', text: this.championKnowledge, cache_control: { type: 'ephemeral' } })
+    }
+    if (extraContext) {
+      blocks.push({ type: 'text', text: extraContext, cache_control: { type: 'ephemeral' } })
+    }
+    return blocks
+  }
+
   clearMatch() {
     this.matchContext = null
     this.lastSuggestion = null
@@ -73,8 +107,9 @@ class AiClient {
     // rank は試合間で維持（clearMatchでリセットしない）
     this.championKnowledge = null
     this._step1Cache = {}  // Step1キャッシュクリア
-    this._macroSession = null
-    this._macroSessionPhase = null
+    this.lastMatchupTip = null
+    this.lastMacroAdvice = null
+    this.lastCoaching = null
   }
 
   // 共通API呼び出し (プロバイダー経由)
@@ -175,7 +210,7 @@ class AiClient {
     // Step1キャッシュ: userMessageのハッシュ的な短縮キーで判定
     const userMsg = messages[messages.length - 1]?.content || ''
     // キル差・レベル・オブジェクト状態を含む短いキーを生成
-    const cacheKey = `${logPrefix}:${userMsg.length}:${userMsg.substring(0, 200)}`
+    const cacheKey = `${logPrefix}:${userMsg.length}:${typeof userMsg === 'string' ? userMsg.substring(0, 200) : JSON.stringify(userMsg).substring(0, 200)}`
     const cached = this._step1Cache?.[logPrefix]
 
     let analysis
@@ -186,7 +221,7 @@ class AiClient {
     } else {
       // Step1実行
       analysis = await this._callApi({
-        model: MODEL_HAIKU, maxTokens: step1MaxTokens, temperature: 0.7,
+        model: this.model, maxTokens: step1MaxTokens, temperature: 0.7,
         system: step1System, messages,
         timeoutMs, logType: `${logPrefix}-step1`, rawText: true
       })
@@ -197,7 +232,7 @@ class AiClient {
     }
 
     return this._callApi({
-      model: MODEL_HAIKU, maxTokens: step2MaxTokens, temperature: 0.3,
+      model: this.model, maxTokens: step2MaxTokens, temperature: 0.3,
       system: step2System,
       messages: [{ role: 'user', content: analysis }],
       timeoutMs: 30000, logType: `${logPrefix}-step2`
@@ -235,40 +270,30 @@ class AiClient {
     return this.provider.validate()
   }
 
-  async getSuggestion(dynamicContext) {
-    const userMessage = this._buildUserMessage(dynamicContext)
+  async getSuggestion(structuredInput) {
+    // 後方互換: string引数の場合は従来通りテキストとして扱う
+    const userMessage = typeof structuredInput === 'string'
+      ? this._buildUserMessage(structuredInput)
+      : JSON.stringify(structuredInput, null, 2)
     const isLocal = this.isLocalLLM()
-
-    const messages = []
-    if (!isLocal && this.matchContext) {
-      messages.push(
-        { role: 'user', content: [{ type: 'text', text: this.matchContext, cache_control: { type: 'ephemeral' } }] },
-        { role: 'assistant', content: '了解' },
-        { role: 'user', content: userMessage }
-      )
-    } else {
-      // ローカルLLM: マルチターンを避け、1メッセージにまとめる
-      const parts = []
-      if (this.matchContext) parts.push(this.matchContext)
-      if (isLocal) {
-        const knowledge = buildKnowledgeContext(this.position || 'MID', this.gameTimeSec)
-        if (knowledge) parts.push(knowledge)
-      }
-      parts.push(userMessage)
-      messages.push({ role: 'user', content: parts.join('\n\n') })
-    }
 
     let aiResult
     if (isLocal) {
+      // ローカルLLM: マルチターンを避け、1メッセージにまとめる
+      const parts = []
+      if (this.matchContext) parts.push(this.matchContext)
+      parts.push(userMessage)
       aiResult = await this._twoStepLocal({
         step1System: LOCAL_ITEM_STEP1_PROMPT, step2System: LOCAL_ITEM_STEP2_PROMPT,
-        messages, step1MaxTokens: 500, step2MaxTokens: 300, logPrefix: 'suggestion'
+        messages: [{ role: 'user', content: parts.join('\n\n') }],
+        step1MaxTokens: 500, step2MaxTokens: 300, logPrefix: 'suggestion'
       })
     } else {
       aiResult = await this._callApi({
-        model: MODEL_HAIKU, maxTokens: 600, temperature: 0,
-        system: [{ type: 'text', text: ITEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-        messages, timeoutMs: 30000, logType: 'suggestion'
+        model: this.model, maxTokens: 600, temperature: 0,
+        system: this._buildSystem(ITEM_PROMPT, this.matchContext),
+        messages: [{ role: 'user', content: userMessage }],
+        timeoutMs: 30000, logType: 'suggestion'
       })
     }
 
@@ -296,167 +321,120 @@ class AiClient {
     return suggestion
   }
 
-  async getMatchupTip(matchupContext) {
+  async getMatchupTip(structuredInput) {
+    // 後方互換: string引数の場合は従来通りテキストとして扱う
+    const userContent = typeof structuredInput === 'string'
+      ? structuredInput
+      : JSON.stringify(structuredInput, null, 2)
     const isLocal = this.isLocalLLM()
-    let userContent = matchupContext
-    if (isLocal) {
-      const knowledge = buildKnowledgeContext(this.position || 'MID', 0)
-      userContent = knowledge ? `${knowledge}\n\n${matchupContext}` : matchupContext
 
-      return this._twoStepLocal({
+    let result
+    if (isLocal) {
+      result = await this._twoStepLocal({
         step1System: LOCAL_MATCHUP_STEP1_PROMPT, step2System: LOCAL_MATCHUP_STEP2_PROMPT,
         messages: [{ role: 'user', content: userContent }],
         step1MaxTokens: 600, step2MaxTokens: 400, logPrefix: 'matchup'
       })
-    }
-
-    return this._callApi({
-      model: MODEL_HAIKU, maxTokens: 700, temperature: 0,
-      system: [{ type: 'text', text: MATCHUP_PROMPT, cache_control: { type: 'ephemeral' } }],
-      messages: [{ role: 'user', content: userContent }],
-      timeoutMs: 20000, logType: 'matchup'
-    })
-  }
-
-  async getMacroAdvice(staticContext, dynamicContext, availableObjectives) {
-    const isLocal = this.isLocalLLM()
-
-    if (isLocal) {
-      const currentPhase = getGamePhase(this.gameTimeSec)
-      const killDiffMatch = dynamicContext.match(/\(([+-]?\d+)\)/)
-      const killDiff = killDiffMatch ? parseInt(killDiffMatch[1]) : 0
-      const macroKnowledge = buildMacroKnowledge(this.position || 'MID', this.gameTimeSec, killDiff, this.rank, availableObjectives)
-
-      // セッション初期化（試合最初の呼び出し）
-      if (!this._macroSession) {
-        this._initMacroSession(staticContext, this.championKnowledge, macroKnowledge, currentPhase)
-      }
-
-      // セッション対応のメッセージ配列を構築
-      const step1Messages = this._buildMacroSessionMessages(dynamicContext, macroKnowledge, currentPhase)
-
-      // Step1: 自由文分析（セッション会話）
-      const analysis = await this._callApi({
-        model: MODEL_HAIKU, maxTokens: 600, temperature: 0.7,
-        system: LOCAL_MACRO_STEP1_PROMPT, messages: step1Messages,
-        timeoutMs: 60000, logType: 'macro-step1', rawText: true,
-        sessionInfo: {
-          turns: Math.floor(this._macroSession.length / 2),
-          phase: currentPhase,
-          totalMessages: step1Messages.length,
-        }
-      })
-      if (!analysis) return null
-
-      // Step1成功 → 会話履歴に追記
-      this._macroSession.push(
-        { role: 'user', content: dynamicContext },
-        { role: 'assistant', content: analysis }
-      )
-      this._trimMacroSession()
-
-      // Step2: JSON化（ステートレス）
-      return this._callApi({
-        model: MODEL_HAIKU, maxTokens: 300, temperature: 0.3,
-        system: LOCAL_MACRO_STEP2_PROMPT,
-        messages: [{ role: 'user', content: analysis }],
-        timeoutMs: 30000, logType: 'macro-step2'
-      })
-    }
-
-    // Claude API パス（変更なし）
-    const messages = []
-    if (staticContext) {
-      messages.push(
-        { role: 'user', content: [{ type: 'text', text: staticContext, cache_control: { type: 'ephemeral' } }] },
-        { role: 'assistant', content: '了解。リアルタイムの試合状況を送ってください。' },
-        { role: 'user', content: dynamicContext }
-      )
     } else {
-      messages.push({ role: 'user', content: dynamicContext })
+      result = await this._callApi({
+        model: this.qualityModel, maxTokens: 700, temperature: 0,
+        system: this._buildSystem(MATCHUP_PROMPT),
+        messages: [{ role: 'user', content: userContent }],
+        timeoutMs: 20000, logType: 'matchup'
+      })
     }
 
-    return this._callApi({
-      model: MODEL_HAIKU, maxTokens: 500, temperature: 0,
-      system: [{ type: 'text', text: MACRO_PROMPT, cache_control: { type: 'ephemeral' } }],
-      messages,
-      timeoutMs: 20000, logType: 'macro'
-    })
-  }
-
-  /**
-   * マクロセッション初期化 — 試合開始時に静的情報を1回だけ送る
-   */
-  _initMacroSession(staticContext, championKnowledge, macroKnowledge, phase) {
-    const parts = []
-    if (staticContext) parts.push(staticContext)
-    if (championKnowledge) parts.push(championKnowledge)
-    if (macroKnowledge) parts.push(macroKnowledge)
-
-    this._macroSession = [
-      { role: 'user', content: parts.join('\n\n') },
-      { role: 'assistant', content: '了解しました。チーム構成とチャンピオン情報を把握しました。リアルタイムの試合状況を送ってください。' },
-    ]
-    this._macroSessionPhase = phase
-    console.log(`[Macro:session] Initialized (phase=${phase}, staticTokens≈${Math.round(parts.join('\n\n').length / 3)})`)
-  }
-
-  /**
-   * セッション対応のメッセージ配列を構築
-   * フェーズ変更時にmacroKnowledgeを再注入
-   */
-  _buildMacroSessionMessages(dynamicContext, macroKnowledge, currentPhase) {
-    // フェーズ変更 → マクロ知識を更新
-    if (currentPhase !== this._macroSessionPhase && macroKnowledge) {
-      const phaseName = currentPhase === 'early' ? '序盤' : currentPhase === 'mid' ? '中盤' : '終盤'
-      this._macroSession.push(
-        { role: 'user', content: `【フェーズ移行: ${phaseName}】\n${macroKnowledge}` },
-        { role: 'assistant', content: `了解。${phaseName}フェーズの知識を反映します。` }
-      )
-      this._macroSessionPhase = currentPhase
-      console.log(`[Macro:session] Phase updated to ${currentPhase}`)
+    if (result) {
+      this.lastMatchupTip = result
+      return result
     }
-
-    // 現在の動的コンテキストを最新メッセージとして追加（まだ履歴には入れない）
-    return [...this._macroSession, { role: 'user', content: dynamicContext }]
-  }
-
-  /**
-   * セッション履歴のトリム — 最大5ターン(初期2 + 動的交換8メッセージ)に制限
-   */
-  _trimMacroSession() {
-    const MAX_DYNAMIC_MESSAGES = 8 // 4ターン分（user+assistant × 4）
-    const initPair = this._macroSession.slice(0, 2)
-    const rest = this._macroSession.slice(2)
-
-    if (rest.length > MAX_DYNAMIC_MESSAGES) {
-      // 古い交換を削除（2メッセージ=1ターンずつ）
-      const trimmed = rest.slice(rest.length - MAX_DYNAMIC_MESSAGES)
-      this._macroSession = [...initPair, ...trimmed]
-      console.log(`[Macro:session] Trimmed to ${this._macroSession.length} messages`)
+    // API失敗時: 前回の正常出力にエラーフラグを付与して返す
+    if (this.lastMatchupTip) {
+      return { error: 'うまく取得できませんでした', ...this.lastMatchupTip }
     }
+    return null
   }
 
-  async getCoaching(gameContext) {
+  async getMacroAdvice(staticContext, structuredInput) {
+    // 後方互換: 第3引数がある場合は旧シグネチャ (staticContext, dynamicContext, availableObjectives)
+    let dynamicContent
+    if (arguments.length >= 3) {
+      // 旧シグネチャ: (staticContext, dynamicContext, availableObjectives)
+      dynamicContent = typeof structuredInput === 'string'
+        ? structuredInput
+        : JSON.stringify(structuredInput, null, 2)
+    } else {
+      // 新シグネチャ: (staticContext, structuredInput)
+      dynamicContent = typeof structuredInput === 'string'
+        ? structuredInput
+        : JSON.stringify(structuredInput, null, 2)
+    }
     const isLocal = this.isLocalLLM()
 
+    let result
     if (isLocal) {
-      return this._twoStepLocal({
+      result = await this._twoStepLocal({
+        step1System: LOCAL_MACRO_STEP1_PROMPT,
+        step2System: LOCAL_MACRO_STEP2_PROMPT,
+        messages: [{ role: 'user', content: dynamicContent }],
+        step1MaxTokens: 500, step2MaxTokens: 300,
+        logPrefix: 'macro', timeoutMs: 60000
+      })
+    } else {
+      result = await this._callApi({
+        model: this.model, maxTokens: 500, temperature: 0,
+        system: this._buildSystem(MACRO_PROMPT, staticContext),
+        messages: [{ role: 'user', content: dynamicContent }],
+        timeoutMs: 20000, logType: 'macro'
+      })
+    }
+
+    if (result) {
+      this.lastMacroAdvice = result
+      return result
+    }
+    if (this.lastMacroAdvice) {
+      return { error: 'うまく取得できませんでした', ...this.lastMacroAdvice }
+    }
+    return null
+  }
+
+  // セッション関連メソッド撤去済み（Ollama KVキャッシュ不在のため）
+
+  async getCoaching(structuredInput) {
+    // 後方互換: string引数の場合は従来通りテキストとして扱う
+    const userContent = typeof structuredInput === 'string'
+      ? structuredInput
+      : JSON.stringify(structuredInput, null, 2)
+    const isLocal = this.isLocalLLM()
+
+    let result
+    if (isLocal) {
+      result = await this._twoStepLocal({
         step1System: LOCAL_COACHING_STEP1_PROMPT, step2System: LOCAL_COACHING_STEP2_PROMPT,
-        messages: [{ role: 'user', content: gameContext }],
+        messages: [{ role: 'user', content: userContent }],
         step1MaxTokens: 1500, step2MaxTokens: 800, logPrefix: 'coaching', timeoutMs: 120000
       })
+    } else {
+      result = await this._callApi({
+        model: this.qualityModel,
+        maxTokens: 4000,
+        temperature: 0.3,
+        system: this._buildSystem(COACHING_PROMPT),
+        messages: [{ role: 'user', content: userContent }],
+        timeoutMs: 60000,
+        logType: 'coaching'
+      })
     }
 
-    return this._callApi({
-      model: MODEL_HAIKU,
-      maxTokens: 4000,
-      temperature: 0,
-      system: COACHING_PROMPT,
-      messages: [{ role: 'user', content: gameContext }],
-      timeoutMs: 60000,
-      logType: 'coaching'
-    })
+    if (result) {
+      this.lastCoaching = result
+      return result
+    }
+    if (this.lastCoaching) {
+      return { error: 'うまく取得できませんでした', ...this.lastCoaching }
+    }
+    return null
   }
 
   _pushLog(entry) {

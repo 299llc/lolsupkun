@@ -1,0 +1,5 @@
+{
+  "valid_actions": ["dragon_prep", "ward"],
+  "preferred_action": "dragon_prep",
+  "must_mention": ["ドラゴン"]
+}

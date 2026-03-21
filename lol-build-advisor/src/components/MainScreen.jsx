@@ -131,7 +131,7 @@ function ObjectivesPanel({ objectives }) {
   )
 }
 
-export function MainScreen({ data, coreBuild, aiSuggestion, aiLoading, positionSelectChamp, substituteItems, coaching, coachingLoading, substituteError, matchupTip, macroAdvice, macroLoading, compact, objectivesStatus, ruleAlerts }) {
+export function MainScreen({ data, coreBuild, aiSuggestion, aiLoading, positionSelectChamp, substituteItems, coaching, coachingLoading, substituteError, matchupTip, matchupLoading, macroAdvice, macroLoading, compact, objectivesStatus, ruleAlerts, skillOrder }) {
   const { players, gameData: gd, activePlayer, myTeamSide, ddragon, ended, isSpectator, allPlayers } = data
   const { me, allies, enemies } = players || {}
   const gameTime = gd?.gameTime || 0
@@ -200,6 +200,27 @@ export function MainScreen({ data, coreBuild, aiSuggestion, aiLoading, positionS
 
         <KillBar leftKills={leftKills} rightKills={rightKills} allyIsLeft={allyIsLeft} />
 
+        {/* スキルオーダー */}
+        {skillOrder?.length > 0 && (
+          <div className="flex items-center justify-center gap-1.5 py-0.5">
+            {skillOrder.map((skill, i) => (
+              <span key={i} className="flex items-center gap-1.5">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                  skill === 'Q' ? 'bg-blue-500/30 text-blue-400' :
+                  skill === 'W' ? 'bg-green-500/30 text-green-400' :
+                  skill === 'E' ? 'bg-yellow-500/30 text-yellow-400' :
+                  'bg-red-500/30 text-red-400'
+                }`}>
+                  {skill}
+                </span>
+                {i < skillOrder.length - 1 && (
+                  <span className="text-[9px] text-lol-text-light">＞</span>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* チーム一覧 */}
         <TeamList label={allyIsLeft ? 'ALLY' : 'ENEMY'} players={leftTeam} isAlly={allyIsLeft} myName={me?.summonerName} ddragon={ddragon} side="left" />
         <TeamList label={allyIsLeft ? 'ENEMY' : 'ALLY'} players={rightTeam} isAlly={!allyIsLeft} myName={me?.summonerName} ddragon={ddragon} side="right" />
@@ -211,7 +232,7 @@ export function MainScreen({ data, coreBuild, aiSuggestion, aiLoading, positionS
       {/* ===== 右カラム: AI情報 ===== */}
       <div className="flex flex-col gap-1.5 overflow-y-auto overflow-x-hidden min-w-0">
         {/* 対面アドバイス（レーン戦終了後は自動折りたたみ） */}
-        {matchupTip && <MatchupTip tip={matchupTip} laningOver={gameTime >= 900} />}
+        <MatchupTip tip={matchupTip} loading={matchupLoading} laningOver={gameTime >= 900} />
 
         {/* ビルドパネル */}
         <BuildPanel

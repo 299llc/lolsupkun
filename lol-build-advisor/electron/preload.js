@@ -21,10 +21,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   toggleAi: (enabled) => ipcRenderer.invoke('ai:toggle', enabled),
   getAiStatus: () => ipcRenderer.invoke('ai:status'),
 
-  // 最前面 ON/OFF
-  toggleOnTop: (enabled) => ipcRenderer.invoke('ontop:toggle', enabled),
-  getOnTopStatus: () => ipcRenderer.invoke('ontop:status'),
-
   // デバッグ
   getAiLogs: () => ipcRenderer.invoke('ai:logs'),
   clearAiLogs: () => ipcRenderer.invoke('ai:clearLogs'),
@@ -94,6 +90,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('matchup:tip', handler)
     return () => ipcRenderer.removeListener('matchup:tip', handler)
   },
+  onMatchupLoading: (cb) => {
+    const handler = (_, data) => cb(data)
+    ipcRenderer.on('matchup:loading', handler)
+    return () => ipcRenderer.removeListener('matchup:loading', handler)
+  },
   onCoachingResult: (cb) => {
     const handler = (_, result) => cb(result)
     ipcRenderer.on('coaching:result', handler)
@@ -141,6 +142,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('compact:status', handler)
   },
   compactClose: () => ipcRenderer.send('compact:close'),
+  compactSetPassthrough: (enabled) => ipcRenderer.send('compact:set-passthrough', enabled),
 
   // 前回試合結果
   getLastGame: () => ipcRenderer.invoke('lastgame:get'),
@@ -154,20 +156,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // ゲームログ
   openGameLogFolder: () => ipcRenderer.invoke('gamelog:openFolder'),
 
-  // ライセンス管理
-  getLicenseStatus: () => ipcRenderer.invoke('license:status'),
-  verifyLicense: (key) => ipcRenderer.invoke('license:verify', key),
-  clearLicense: () => ipcRenderer.invoke('license:clear'),
-
-  // プロバイダー切替 (Ollama / Anthropic)
+  // プロバイダー切替 (Ollama / Anthropic / Bedrock / Gemini)
   setOllamaProvider: (opts) => ipcRenderer.invoke('provider:set-ollama', opts),
-  setAnthropicProvider: (key) => ipcRenderer.invoke('provider:set-anthropic', key),
+  setAnthropicProvider: () => ipcRenderer.invoke('provider:set-anthropic'),
+  setBedrockProvider: () => ipcRenderer.invoke('provider:set-bedrock'),
+  setGeminiProvider: () => ipcRenderer.invoke('provider:set-gemini'),
   getProvider: () => ipcRenderer.invoke('provider:get'),
   ollamaModels: (baseUrl) => ipcRenderer.invoke('ollama:models', baseUrl),
   ollamaValidate: (opts) => ipcRenderer.invoke('ollama:validate', opts),
 
-  // 広告
-  getAd: () => ipcRenderer.invoke('ad:get'),
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
 
   // Ollama 自動セットアップ

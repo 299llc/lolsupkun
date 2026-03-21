@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { X, Check, Loader2, AlertCircle, Pin, RefreshCw, FolderOpen, Shield, ChevronDown, Download, Play, Zap, Trash2 } from 'lucide-react'
+import { X, Check, Loader2, AlertCircle, RefreshCw, FolderOpen, ChevronDown, Download, Play, Zap, Trash2, FileText, Scale, Cloud, Monitor } from 'lucide-react'
+import { LegalDialog } from './LegalDialog'
 
 // ダウンロード可能なモデル一覧
 const AVAILABLE_MODELS = [
@@ -200,12 +201,12 @@ function StatusItem({ label, ok }) {
 
 export function SettingsDialog({ onClose }) {
   const [aiOn, setAiOn] = useState(false)
-  const [onTop, setOnTop] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [refreshResult, setRefreshResult] = useState(null)
+  const [legalPage, setLegalPage] = useState(null) // 'privacy' | 'disclaimer' | null
 
-  // プロバイダー設定 (現在はローカルLLMのみ)
-  const [providerType, setProviderType] = useState('ollama')
+  // プロバイダー設定
+  const [providerType, setProviderType] = useState('ollama') // 'ollama' | 'cloud'
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434')
   const [ollamaModel, setOllamaModel] = useState('')
   const [activeModel, setActiveModel] = useState('') // 現在使用中のモデル名
@@ -215,40 +216,44 @@ export function SettingsDialog({ onClose }) {
   const [pullingModel, setPullingModel] = useState(null) // ダウンロード中のモデルID
   const [pullProgress, setPullProgress] = useState(null)
 
-  // ライセンス
-  const [licenseKey, setLicenseKey] = useState('')
-  const [licenseStatus, setLicenseStatus] = useState(null)
-  const [licenseVerifying, setLicenseVerifying] = useState(false)
-  const [licenseError, setLicenseError] = useState('')
+  // クラウドプロバイダー設定
+  const [cloudSubType, setCloudSubType] = useState('bedrock') // 'bedrock' | 'anthropic' | 'gemini'
+  const [cloudStatus, setCloudStatus] = useState(null) // 'connected' | 'error' | 'validating' | null
 
   useEffect(() => {
     window.electronAPI?.getAiStatus().then(on => setAiOn(!!on))
-    window.electronAPI?.getOnTopStatus().then(on => setOnTop(!!on))
-
     // プロバイダー復元
     window.electronAPI?.getProvider().then(p => {
+      if (p?.type === 'bedrock') {
+        setProviderType('cloud')
+        setCloudSubType('bedrock')
+        setCloudStatus('connected')
+      } else if (p?.type === 'anthropic') {
+        setProviderType('cloud')
+        setCloudSubType('anthropic')
+        setCloudStatus('connected')
+      } else if (p?.type === 'gemini') {
+        setProviderType('cloud')
+        setCloudSubType('gemini')
+        setCloudStatus('connected')
+      } else {
+        setProviderType('ollama')
+      }
       if (p?.baseUrl) setOllamaUrl(p.baseUrl)
       const model = p?.model || (p?.type === 'ollama' ? 'qwen3.5:9b' : '')
       if (model) { setOllamaModel(model); setActiveModel(model) }
-      if (p?.type === 'ollama') {
+      if (p?.type === 'ollama' || !p?.type) {
         setOllamaStatus('connected')
-        // モデル一覧も取得
-        const url = p.baseUrl || 'http://localhost:11434'
+        const url = p?.baseUrl || 'http://localhost:11434'
         window.electronAPI?.ollamaModels(url).then(models => {
           if (models?.length > 0) {
             setOllamaModels(models)
-            // 現在のモデルがリストにない場合はリスト先頭を選択
             if (model && !models.some(m => m.name === model)) {
               setOllamaModel(models[0].name)
             }
           }
         }).catch(() => {})
       }
-    })
-
-    // ライセンス状態
-    window.electronAPI?.getLicenseStatus().then(s => {
-      if (s) setLicenseStatus(s)
     })
 
     // モデルDL進捗
@@ -302,19 +307,27 @@ export function SettingsDialog({ onClose }) {
     } catch {}
   }
 
-  // ライセンス検証
-  const verifyLicense = async () => {
-    if (!licenseKey.trim()) return
-    setLicenseVerifying(true)
-    setLicenseError('')
-    const result = await window.electronAPI?.verifyLicense(licenseKey.trim())
-    setLicenseVerifying(false)
-    if (result?.valid) {
-      const s = await window.electronAPI?.getLicenseStatus()
-      setLicenseStatus(s)
-      setLicenseKey('')
-    } else {
-      setLicenseError(result?.error || '検証に失敗しました')
+  // プロバイダー切り替え
+  const switchProvider = async (type) => {
+    setProviderType(type)
+    if (type === 'cloud') {
+      connectCloud(cloudSubType)
+    }
+  }
+
+  // クラウドサブタイプ接続
+  const connectCloud = async (subType) => {
+    setCloudSubType(subType)
+    setCloudStatus('validating')
+    if (subType === 'bedrock') {
+      const result = await window.electronAPI?.setBedrockProvider()
+      setCloudStatus(result?.success ? 'connected' : 'error')
+    } else if (subType === 'anthropic') {
+      const result = await window.electronAPI?.setAnthropicProvider()
+      setCloudStatus(result?.success ? 'connected' : 'error')
+    } else if (subType === 'gemini') {
+      const result = await window.electronAPI?.setGeminiProvider()
+      setCloudStatus(result?.success ? 'connected' : 'error')
     }
   }
 
@@ -329,20 +342,6 @@ export function SettingsDialog({ onClose }) {
         </div>
 
         <div className="p-4 space-y-4">
-          {/* 最前面 ON/OFF トグル */}
-          <div className="flex items-center justify-between py-2 px-3 rounded bg-lol-bg border border-lol-gold-dim/30">
-            <div className="flex items-center gap-2">
-              <Pin size={14} className={onTop ? 'text-lol-gold' : 'text-lol-text'} />
-              <span className="text-xs text-lol-text-light">常に最前面に表示</span>
-            </div>
-            <button
-              onClick={async () => { const next = !onTop; await window.electronAPI?.toggleOnTop(next); setOnTop(next) }}
-              className={`relative w-10 h-5 rounded-full transition-colors ${onTop ? 'bg-lol-gold' : 'bg-lol-surface-light'}`}
-            >
-              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${onTop ? 'translate-x-5' : 'translate-x-0.5'}`} />
-            </button>
-          </div>
-
           {/* ── AI セットアップ ── */}
           <div className="space-y-2 p-3 rounded bg-lol-bg border border-lol-blue/20">
             <div className="flex items-center justify-between">
@@ -458,54 +457,97 @@ export function SettingsDialog({ onClose }) {
 
           </div>
 
-          {/* ── ライセンス ── */}
+          {/* ── プロバイダー選択 ── */}
           <div className="space-y-2 p-3 rounded bg-lol-bg border border-lol-gold-dim/30">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-lol-text flex items-center gap-1.5">
-                <Shield size={12} />
-                ライセンス
-              </span>
-              <span className={`text-[11px] px-2 py-0.5 rounded ${licenseStatus?.tier === 'pro' ? 'bg-lol-gold/20 text-lol-gold' : 'bg-lol-surface-light text-lol-text'}`}>
-                {licenseStatus?.tier === 'pro' ? 'Pro' : 'Free'}
-              </span>
+            <span className="text-xs text-lol-text-light">AIプロバイダー</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => switchProvider('ollama')}
+                className={`flex-1 py-2 text-xs rounded border transition-colors flex items-center justify-center gap-1.5 ${
+                  providerType === 'ollama'
+                    ? 'bg-lol-blue/20 text-lol-blue border-lol-blue/40'
+                    : 'bg-lol-surface text-lol-text border-lol-gold-dim/30 hover:border-lol-blue/30'
+                }`}
+              >
+                <Monitor size={12} />
+                ローカル (Free)
+              </button>
+              <button
+                onClick={() => switchProvider('cloud')}
+                className={`flex-1 py-2 text-xs rounded border transition-colors flex items-center justify-center gap-1.5 ${
+                  providerType === 'cloud'
+                    ? 'bg-lol-gold/20 text-lol-gold border-lol-gold/40'
+                    : 'bg-lol-surface text-lol-text border-lol-gold-dim/30 hover:border-lol-gold/30'
+                }`}
+              >
+                <Cloud size={12} />
+                クラウド (Pro)
+              </button>
             </div>
-
-            {licenseStatus?.tier === 'pro' ? (
-              <div className="space-y-1">
-                <p className="text-[11px] text-lol-gold">Pro ライセンス有効 - 無制限</p>
-                <button
-                  onClick={async () => {
-                    await window.electronAPI?.clearLicense()
-                    setLicenseStatus({ tier: 'free', remainingGames: 2 })
-                  }}
-                  className="text-[10px] text-lol-text hover:text-lol-red transition-colors"
-                >
-                  ライセンスを解除
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-[11px] text-lol-text">
-                  本日の残り試合: <span className="text-lol-blue font-bold">{licenseStatus?.remainingGames ?? 2}</span> / 2
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={licenseKey}
-                    onChange={e => { setLicenseKey(e.target.value); setLicenseError('') }}
-                    placeholder="ライセンスキー"
-                    className="flex-1 px-2 py-1.5 bg-lol-surface border border-lol-gold-dim/30 rounded text-xs text-lol-text-light placeholder:text-lol-text/30 focus:outline-none focus:border-lol-gold/50"
-                  />
+            {providerType === 'cloud' && (
+              <div className="space-y-2 pt-1">
+                {/* サブタイプ切り替え */}
+                <div className="flex gap-1">
                   <button
-                    onClick={verifyLicense}
-                    disabled={!licenseKey.trim() || licenseVerifying}
-                    className="px-3 py-1.5 text-xs rounded bg-lol-gold/20 text-lol-gold border border-lol-gold/30 hover:bg-lol-gold/30 disabled:opacity-40 transition-colors"
+                    onClick={() => connectCloud('bedrock')}
+                    className={`flex-1 py-1 text-[10px] rounded transition-colors ${
+                      cloudSubType === 'bedrock'
+                        ? 'bg-lol-gold/15 text-lol-gold border border-lol-gold/30'
+                        : 'text-lol-text border border-lol-gold-dim/20 hover:border-lol-gold/20'
+                    }`}
                   >
-                    {licenseVerifying ? <Loader2 size={12} className="animate-spin" /> : '認証'}
+                    Bedrock (AWS)
+                  </button>
+                  <button
+                    onClick={() => connectCloud('anthropic')}
+                    className={`flex-1 py-1 text-[10px] rounded transition-colors ${
+                      cloudSubType === 'anthropic'
+                        ? 'bg-lol-gold/15 text-lol-gold border border-lol-gold/30'
+                        : 'text-lol-text border border-lol-gold-dim/20 hover:border-lol-gold/20'
+                    }`}
+                  >
+                    Anthropic API
+                  </button>
+                  <button
+                    onClick={() => connectCloud('gemini')}
+                    className={`flex-1 py-1 text-[10px] rounded transition-colors ${
+                      cloudSubType === 'gemini'
+                        ? 'bg-lol-gold/15 text-lol-gold border border-lol-gold/30'
+                        : 'text-lol-text border border-lol-gold-dim/20 hover:border-lol-gold/20'
+                    }`}
+                  >
+                    Gemini
                   </button>
                 </div>
-                {licenseError && (
-                  <p className="text-[11px] text-lol-red">{licenseError}</p>
+
+                {/* Bedrock ステータス */}
+                {cloudSubType === 'bedrock' && (
+                  <div className="flex items-center gap-2 px-1">
+                    <div className={`w-2 h-2 rounded-full ${cloudStatus === 'connected' ? 'bg-lol-accent' : cloudStatus === 'error' ? 'bg-lol-red' : cloudStatus === 'validating' ? 'bg-lol-blue animate-pulse' : 'bg-lol-text/30'}`} />
+                    <span className="text-[11px] text-lol-text-light">
+                      {cloudStatus === 'connected' ? 'Bedrock (AWS) 接続済み' : cloudStatus === 'error' ? 'Bedrock 接続失敗 — .env を確認してください' : cloudStatus === 'validating' ? '接続確認中...' : '未接続'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Anthropic ステータス */}
+                {cloudSubType === 'anthropic' && (
+                  <div className="flex items-center gap-2 px-1">
+                    <div className={`w-2 h-2 rounded-full ${cloudStatus === 'connected' ? 'bg-lol-accent' : cloudStatus === 'error' ? 'bg-lol-red' : cloudStatus === 'validating' ? 'bg-lol-blue animate-pulse' : 'bg-lol-text/30'}`} />
+                    <span className="text-[11px] text-lol-text-light">
+                      {cloudStatus === 'connected' ? 'Anthropic API 接続済み' : cloudStatus === 'error' ? 'Anthropic 接続失敗 — .env を確認してください' : cloudStatus === 'validating' ? '接続確認中...' : '未接続'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Gemini ステータス */}
+                {cloudSubType === 'gemini' && (
+                  <div className="flex items-center gap-2 px-1">
+                    <div className={`w-2 h-2 rounded-full ${cloudStatus === 'connected' ? 'bg-lol-accent' : cloudStatus === 'error' ? 'bg-lol-red' : cloudStatus === 'validating' ? 'bg-lol-blue animate-pulse' : 'bg-lol-text/30'}`} />
+                    <span className="text-[11px] text-lol-text-light">
+                      {cloudStatus === 'connected' ? 'Gemini API 接続済み' : cloudStatus === 'error' ? 'Gemini 接続失敗 — .env を確認してください' : cloudStatus === 'validating' ? '接続確認中...' : '未接続'}
+                    </span>
+                  </div>
                 )}
               </div>
             )}
@@ -558,17 +600,38 @@ export function SettingsDialog({ onClose }) {
             </button>
           </div>
 
-          {/* バージョン情報 & 免責表記 */}
+          {/* バージョン情報 & 法的情報 */}
           <div className="pt-2 border-t border-lol-gold-dim/20 text-center space-y-2">
             <p className="text-[10px] text-lol-text/50">
               ろるさぽくん v{__APP_VERSION__}
             </p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => setLegalPage('privacy')}
+                className="text-[10px] text-lol-text/40 hover:text-lol-blue transition-colors flex items-center gap-1"
+              >
+                <FileText size={10} />
+                プライバシーポリシー
+              </button>
+              <span className="text-lol-text/20">|</span>
+              <button
+                onClick={() => setLegalPage('disclaimer')}
+                className="text-[10px] text-lol-text/40 hover:text-lol-blue transition-colors flex items-center gap-1"
+              >
+                <Scale size={10} />
+                免責事項
+              </button>
+            </div>
             <p className="text-[9px] text-lol-text/30 leading-relaxed">
               ろるさぽくん isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
             </p>
           </div>
         </div>
       </div>
+
+      {legalPage && (
+        <LegalDialog page={legalPage} onClose={() => setLegalPage(null)} />
+      )}
     </div>
   )
 }
