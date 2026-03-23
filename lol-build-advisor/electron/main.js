@@ -327,9 +327,13 @@ function isNormalEndFromEvents(events) {
   const safeEvents = events || []
   const hasGameEnd = safeEvents.some(event => event?.EventName === 'GameEnd')
   const turretKillCount = safeEvents.filter(event => event?.EventName === 'TurretKilled').length
-  const hit = hasGameEnd && turretKillCount >= 3
+  // remake判定: GameEnd があるがタワー破壊が極端に少ない & 試合時間が短い
+  const isRemake = hasGameEnd && turretKillCount === 0
+  // 通常終了: タワーが敵味方合わせて6本以上折れた試合（surrender含む）
+  // remake のみ除外
+  const hit = hasGameEnd && !isRemake && turretKillCount >= 6
   console.log(
-    `[GameEnd] normal_end=${hit} ` +
+    `[GameEnd] normal_end=${hit} remake=${isRemake} ` +
     `game_end=${hasGameEnd} turret_kills=${turretKillCount} from_events=${safeEvents.length}`
   )
   return hit
@@ -801,6 +805,7 @@ function resetBuildState() {
   state.lastSuggestion = null
   state.aiPending = false
   if (macroFeature) macroFeature.resetState()
+  suggestionFeature.resetTriggerState()
   state._lastSuggFingerprint = null
   // コンパクトウィンドウ再送用キャッシュ
   state.lastMacroAdvice = null

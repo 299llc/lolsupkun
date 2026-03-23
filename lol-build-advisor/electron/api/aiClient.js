@@ -227,7 +227,7 @@ class AiClient {
     return rest
   }
 
-  async _callInteractionApi({ kind, model, maxTokens, temperature = 0, system, messages, timeoutMs, logType, jsonSchema = null }) {
+  async _callInteractionApi({ kind, model, maxTokens, temperature = 0, system, messages, timeoutMs, logType, jsonSchema = null, sessionInfo = null }) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), timeoutMs)
     const startTime = Date.now()
@@ -249,6 +249,7 @@ class AiClient {
         continued: !!session.id,
         previousInteractionId: session.id || null,
         interactionId: null,
+        ...(sessionInfo || {}),
       },
     }
 
@@ -480,11 +481,13 @@ class AiClient {
           role: structuredInput.me.role,
         } : null,
         core_build: structuredInput?.core_build || [],
+        enemy_skills: structuredInput?.enemy_skills || [],
+        enemy_healing: structuredInput?.enemy_healing,
+        enemy_cc_level: structuredInput?.enemy_cc_level,
       }
       const dynamicPayload = session.bootstrapped ? {
         me: structuredInput?.me,
         enemy_damage_profile: structuredInput?.enemy_damage_profile,
-        enemy_healing: structuredInput?.enemy_healing,
         enemy_threats: structuredInput?.enemy_threats,
         situation: structuredInput?.situation,
         candidates: structuredInput?.candidates,
@@ -584,7 +587,7 @@ class AiClient {
     return null
   }
 
-  async getMacroAdvice(staticContext, structuredInput) {
+  async getMacroAdvice(staticContext, structuredInput, debugMeta = null) {
     const sanitizedMacroInput = this._sanitizeMacroInput(structuredInput)
     // 後方互換: 第3引数がある場合は旧シグネチャ (staticContext, dynamicContext, availableObjectives)
     let dynamicContent
@@ -633,7 +636,8 @@ class AiClient {
         system: this._buildMacroInteractionSystem(),
         messages: [{ role: 'user', content: interactionMessage }],
         timeoutMs: 20000, logType: 'macro',
-        jsonSchema: MACRO_RESPONSE_SCHEMA
+        jsonSchema: MACRO_RESPONSE_SCHEMA,
+        sessionInfo: debugMeta
       })
     } else
     if (isLocal) {
@@ -650,7 +654,8 @@ class AiClient {
         model: this._getMacroModel(), maxTokens: 500, temperature: 0,
         system: this._buildSystem(MACRO_PROMPT, staticContext),
         messages: [{ role: 'user', content: dynamicContent }],
-        timeoutMs: 20000, logType: 'macro'
+        timeoutMs: 20000, logType: 'macro',
+        sessionInfo: debugMeta
       })
     }
 

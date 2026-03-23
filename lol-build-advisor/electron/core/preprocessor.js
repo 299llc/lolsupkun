@@ -552,6 +552,17 @@ class Preprocessor {
     if (gameState.enemy.healerCount >= 3) enemyHealing = 'required'
     else if (gameState.enemy.healerCount >= 2) enemyHealing = 'needed'
 
+    // 敵5体のスキル詳細（静的情報: 試合中変わらない）
+    const enemySkills = gameState.enemies.map(e => {
+      const spells = getSpells(e.enName)
+      if (!spells) return { champion: e.champion, skills: null }
+      return {
+        champion: e.champion,
+        passive: spells.passive,
+        spells: spells.spells
+      }
+    })
+
     return {
       me: {
         champion: gameState.me.champion,
@@ -563,7 +574,9 @@ class Preprocessor {
       },
       enemy_damage_profile: gameState.enemy.damageProfile,
       enemy_healing: enemyHealing,
+      enemy_cc_level: gameState.enemy.ccLevel || 'low',
       enemy_threats: gameState.enemy.threats,
+      enemy_skills: enemySkills,
       situation: gameState.situation,
       candidates: finalCandidates,
       core_build: coreBuild.map(item => ({
