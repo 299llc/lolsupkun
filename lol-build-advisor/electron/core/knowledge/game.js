@@ -903,17 +903,76 @@ const PHASE_BASE_SECTIONS = {
   late:  ['gameBasics', 'elderDragon', 'baseRaceDecision', 'deathTimerAbuse'],
 }
 
+// コーチング用: ロール別知識セクション
+const COACHING_COMMON_SECTIONS = [
+  'gameBasics', 'itemCategories', 'grievousWounds', 'crowdControl',
+  'dragonElements', 'buffUsage', 'ultimateManagement',
+  'winConditions', 'objectivePriority', 'objectivePrep',
+  'teamfighting', 'teamfightByRole',
+  'powerSpikes', 'goldXpAdvantage',
+  'playingFromBehind', 'closingOutGames',
+  'fightOrFlight', 'comebackGoldMechanics', 'deathTimerAbuse',
+  'communication',
+]
+
+const COACHING_SECTIONS_BY_ROLE = {
+  TOP: [
+    ...COACHING_COMMON_SECTIONS,
+    'waveManagement', 'earlyWaveManagement', 'laneTrading', 'recallTiming',
+    'splitPush', 'teleportUsage', 'towerDiving', 'towerAggroManagement',
+    'tradingStance', 'tethering', 'abilityCooldownWindows',
+    'experienceDenial', 'minionWaveMath',
+    'crossMapPlay', 'laneStateBeforeObjectives', 'resetOptimization',
+    'herald', 'voidgrub',
+    'winConditionIdentification', 'powerSpikeTracking', 'goldLeadInterpretation',
+    'teamCompSynergy', 'draftCounterStrategy', 'midGameTransition',
+  ],
+  JG: [
+    ...COACHING_COMMON_SECTIONS,
+    'jungleTracking', 'counterJungling',
+    'voidgrub', 'herald',
+    'baronBait', 'elderDragon',
+    'midGameTransition', 'crossMapPlay', 'laneStateBeforeObjectives',
+    'winConditionIdentification', 'teamCompSynergy', 'draftCounterStrategy',
+    'summonerSpellTracking',
+  ],
+  MID: [
+    ...COACHING_COMMON_SECTIONS,
+    'waveManagement', 'earlyWaveManagement', 'laneTrading', 'recallTiming',
+    'roaming', 'tradingStance', 'tethering', 'abilityCooldownWindows',
+    'minionWaveMath', 'experienceDenial', 'towerAggroManagement',
+    'midGameTransition', 'crossMapPlay', 'laneStateBeforeObjectives',
+    'resetOptimization', 'fogOfWarUsage',
+    'winConditionIdentification', 'powerSpikeTracking', 'goldLeadInterpretation',
+    'teamCompSynergy', 'draftCounterStrategy', 'summonerSpellTracking',
+  ],
+  ADC: [
+    ...COACHING_COMMON_SECTIONS,
+    'earlyWaveManagement', 'laneTrading', 'recallTiming',
+    'autoAttackSpacing', 'tradingStance', 'tethering',
+    'resetOptimization', 'midGameTransition',
+    'powerSpikeTracking', 'goldLeadInterpretation',
+  ],
+  SUP: [
+    ...COACHING_COMMON_SECTIONS,
+    'visionControl', 'earlyVision', 'lateVision',
+    'roaming', 'fogOfWarUsage', 'laneTrading',
+    'midGameTransition', 'summonerSpellTracking',
+    'baronBait',
+  ],
+}
+
 // アイテム判断用の最小知識セット
 const ITEM_KNOWLEDGE_SECTIONS = [
   'gameBasics', 'itemCategories', 'grievousWounds', 'crowdControl', 'powerSpikes', 'goldXpAdvantage',
   'recallTiming', 'winConditions', 'dragonElements',
 ]
 
-// マッチアップ用の知識セット
+// マッチアップ用の知識セット（対面判断に必要な最小限のみ）
 const LANING_KNOWLEDGE_SECTIONS = [
-  'crowdControl', 'laneTrading', 'earlyWaveManagement', 'tradingStance', 'tethering',
-  'abilityCooldownWindows', 'autoAttackSpacing', 'experienceDenial', 'fogOfWarUsage',
-  'powerSpikes', 'summonerSpellTracking',
+  'crowdControl',   // CC種類の判別（テナシティ/QSS有効性）
+  'laneTrading',    // ショート/ロングトレードの選択基準
+  'powerSpikes',    // レベル別パワースパイク（危険タイミング）
 ]
 
 /**
@@ -984,13 +1043,15 @@ function _buildKnowledgeText(sectionKeys, header) {
   return lines.join('\n')
 }
 
-function buildFullGameKnowledgeText() {
+function buildFullGameKnowledgeText(role) {
   const textbookText = _buildKnowledgeText(Object.keys(MACRO_TEXTBOOK), '【League of Legends ゲーム知識】')
 
-  // ロール別戦略を追加
+  // ロール別戦略を追加（roleが指定されていればそのロールのみ）
   const roleLines = ['\n\n【ロール別戦略】']
-  for (const [role, info] of Object.entries(ROLE_KNOWLEDGE)) {
-    roleLines.push(`\n■ ${role}`)
+  const roles = role ? { [role]: ROLE_KNOWLEDGE[role] } : ROLE_KNOWLEDGE
+  for (const [r, info] of Object.entries(roles)) {
+    if (!info) continue
+    roleLines.push(`\n■ ${r}`)
     roleLines.push(`優先事項: ${info.priorities.join('、')}`)
     roleLines.push(`CS目安: ${info.csTarget}/分`)
     roleLines.push(`序盤: ${info.earlyGame}`)
@@ -1001,9 +1062,40 @@ function buildFullGameKnowledgeText() {
   return textbookText + roleLines.join('\n')
 }
 
+/**
+ * コーチング用: ロールに絞った知識テキストを生成
+ * @param {string} role - 'TOP'|'JG'|'MID'|'ADC'|'SUP'
+ */
+function buildCoachingKnowledgeText(role) {
+  const sections = COACHING_SECTIONS_BY_ROLE[role] || Object.keys(MACRO_TEXTBOOK)
+  // teamfightByRole はロール固有のみ出力するため、一旦除外して個別に追加
+  const filteredSections = sections.filter(s => s !== 'teamfightByRole')
+  const textbookText = _buildKnowledgeText(filteredSections, '【League of Legends ゲーム知識】')
+    + (sections.includes('teamfightByRole') && MACRO_TEXTBOOK.teamfightByRole?.[role]
+      ? `\n\n■ チーム戦での${role}の役割\n- ${MACRO_TEXTBOOK.teamfightByRole[role]}`
+      : '')
+
+  // ロール別戦略（指定ロールのみ）
+  const info = ROLE_KNOWLEDGE[role]
+  if (info) {
+    const roleLines = [
+      `\n\n【ロール別戦略】`,
+      `\n■ ${role}`,
+      `優先事項: ${info.priorities.join('、')}`,
+      `CS目安: ${info.csTarget}/分`,
+      `序盤: ${info.earlyGame}`,
+      `中盤: ${info.midGame}`,
+      `終盤: ${info.lateGame}`,
+    ]
+    return textbookText + roleLines.join('\n')
+  }
+
+  return textbookText
+}
+
 module.exports = {
   ROLE_KNOWLEDGE, CLASS_KNOWLEDGE, PHASE_KNOWLEDGE, MACRO_TEXTBOOK, TAG_TRAITS,
-  SECTION_LABELS, buildFullGameKnowledgeText,
+  SECTION_LABELS, buildFullGameKnowledgeText, buildCoachingKnowledgeText,
   buildMacroKnowledgeText, buildItemKnowledgeText, buildLaningKnowledgeText,
   ACTION_KNOWLEDGE_MAP,
 }

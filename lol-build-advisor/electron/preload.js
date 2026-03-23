@@ -165,6 +165,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   ollamaModels: (baseUrl) => ipcRenderer.invoke('ollama:models', baseUrl),
   ollamaValidate: (opts) => ipcRenderer.invoke('ollama:validate', opts),
 
+  // プロンプトプレビュー
+  getPromptPreview: (role) => ipcRenderer.invoke('debug:promptPreview', role),
+
+  // デバッグ設定（開発者メニュー）
+  getDebugSettings: () => ipcRenderer.invoke('debug:getSettings'),
+  setDebugSettings: (settings) => ipcRenderer.invoke('debug:setSettings', settings),
+
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
 
   // Ollama 自動セットアップ

@@ -249,8 +249,8 @@ export function MainScreen({ data, coreBuild, aiSuggestion, aiLoading, positionS
         {/* ルールベースアラート */}
         <RuleAlerts alerts={ruleAlerts} />
 
-        {/* マクロアドバイス（常に表示） */}
-        <MacroAdvice advice={macroAdvice} loading={macroLoading} />
+        {/* マクロアドバイス（データがある場合のみ表示） */}
+        {(macroAdvice || macroLoading) && <MacroAdvice advice={macroAdvice} loading={macroLoading} />}
       </div>
     </div>
   )

@@ -90,7 +90,7 @@ export default function App() {
       </div>
 
       {showSettings && (
-        <SettingsDialog onClose={() => setShowSettings(false)} />
+        <SettingsDialog onClose={() => setShowSettings(false)} isDev={isDev} />
       )}
       {showDebug && (
         <DebugPanel onClose={() => setShowDebug(false)} />

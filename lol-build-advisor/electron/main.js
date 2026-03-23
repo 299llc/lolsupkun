@@ -209,13 +209,6 @@ function saveRuntimeSession() {
   try {
     if (!state.matchSession) return
     fs.writeFileSync(runtimeSessionPath(), JSON.stringify(state.matchSession), 'utf-8')
-    console.log(
-      `[Session] Saved runtime session ` +
-      `match=${state.matchSession.matchKey} ` +
-      `build=${state.matchSession.buildInteractionId ? 'set' : 'none'} ` +
-      (macroFeature ? `macro=${state.matchSession.macroInteractionId ? 'set' : 'none'} history=${(state.matchSession.macroAdviceHistory || []).length} ` : '') +
-      `ended=${!!state.matchSession.ended}`
-    )
   } catch (err) {
     console.warn(`[Session] Failed to save runtime session: ${err.message}`)
   }
@@ -256,7 +249,6 @@ function ensureMatchSession(me, gameTime) {
   const matchKey = buildMatchSessionKey(me)
   if (state.matchSession?.matchKey === matchKey) {
     state.matchSession.lastGameTime = gameTime
-    console.log(`[Session] Reusing in-memory session for ${matchKey} at t=${gameTime}s`)
     saveRuntimeSession()
     return { status: 'existing' }
   }
@@ -711,6 +703,41 @@ function setupIPC() {
   ipcMain.handle('ai:logs', () => state.aiClient?.getLogs() || [])
   ipcMain.handle('ai:clearLogs', () => { state.aiClient?.clearLogs(); return true })
   ipcMain.handle('app:isDev', () => state.isDev)
+
+  // プロンプトプレビュー（各AIタイプの初期データ）
+  ipcMain.handle('debug:promptPreview', (_, role) => {
+    const { buildItemKnowledgeText, buildLaningKnowledgeText, buildCoachingKnowledgeText } = require('./core/knowledge/game')
+    const { ITEM_PROMPT, MATCHUP_PROMPT, COACHING_PROMPT } = require('./core/prompts')
+    const posToRole = { TOP: 'TOP', JUNGLE: 'JG', MIDDLE: 'MID', BOTTOM: 'ADC', UTILITY: 'SUP' }
+    const detectedRole = posToRole[state.aiClient?.position] || null
+    const roleKey = role || detectedRole
+    return {
+      detectedRole: detectedRole || '未検出',
+      role: roleKey || '未検出',
+      build: {
+        knowledge: buildItemKnowledgeText(),
+        prompt: ITEM_PROMPT,
+        knowledgeChars: buildItemKnowledgeText().length,
+      },
+      matchup: {
+        knowledge: buildLaningKnowledgeText(),
+        prompt: MATCHUP_PROMPT,
+        knowledgeChars: buildLaningKnowledgeText().length,
+      },
+      coaching: {
+        knowledge: roleKey ? buildCoachingKnowledgeText(roleKey) : '(ロール未検出 — 全セクション送信)',
+        prompt: COACHING_PROMPT,
+        knowledgeChars: roleKey ? buildCoachingKnowledgeText(roleKey).length : 0,
+      },
+    }
+  })
+
+  // デバッグ設定（開発者メニュー）
+  ipcMain.handle('debug:getSettings', () => ({ skipTimeLimit: !!state.debugSkipTimeLimit }))
+  ipcMain.handle('debug:setSettings', (_, settings) => {
+    if (settings.skipTimeLimit !== undefined) state.debugSkipTimeLimit = !!settings.skipTimeLimit
+    return true
+  })
 
   ipcMain.handle('debug:state', async () => {
     const raw = await state.poller?.fetchAllGameData()
@@ -1340,8 +1367,9 @@ async function handleGameData(gameData) {
   state.lastGameSnapshot = snapshot
 
   const objSummary = getObjectivesSummary(events, gt)
-  // デバッグ: 60秒ごとにオブジェクト状況をログ（前回と同じ内容ならスキップ）
-  const objLogKey = `${Math.floor(gt / 60)}_${objSummary.dragon}_${objSummary.baron}`
+  // デバッグ: 60秒ごとにオブジェクト状況をログ（カウントダウン秒数の変化ではスキップ）
+  const stripCountdown = (s) => s.replace(/あと\d+:\d+/g, 'あとX:XX').replace(/\d+体討伐済み/g, 'N体討伐済み')
+  const objLogKey = `${Math.floor(gt / 60)}_${stripCountdown(objSummary.dragon)}_${stripCountdown(objSummary.baron)}`
   if (objLogKey !== state._lastObjLogKey) {
     state._lastObjLogKey = objLogKey
     // 未出現・リスポーン待ちのオブジェクトはログから省略

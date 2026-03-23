@@ -7,7 +7,7 @@
  * プロバイダー抽象化: AnthropicProvider (BYOK) / BedrockProvider (AWS) / OllamaProvider (ローカルLLM) を切り替え可能
  */
 const { ITEM_PROMPT, MATCHUP_PROMPT, MACRO_PROMPT, COACHING_PROMPT } = require('../core/prompts')
-const { buildFullGameKnowledgeText, buildMacroKnowledgeText, buildItemKnowledgeText, buildLaningKnowledgeText } = require('../core/knowledge/game')
+const { buildFullGameKnowledgeText, buildCoachingKnowledgeText, buildMacroKnowledgeText, buildItemKnowledgeText, buildLaningKnowledgeText } = require('../core/knowledge/game')
 const {
   LOCAL_ITEM_STEP1_PROMPT, LOCAL_ITEM_STEP2_PROMPT,
   LOCAL_MATCHUP_STEP1_PROMPT, LOCAL_MATCHUP_STEP2_PROMPT,
@@ -316,7 +316,7 @@ class AiClient {
       type: logType,
       provider: this.getProviderType(),
       model: model || '',
-      system: typeof system === 'string' ? system : system?.[0]?.text || '',
+      system: typeof system === 'string' ? system : (Array.isArray(system) ? system.map(b => b.text).join('\n\n---\n\n') : ''),
       userMessage: messages[messages.length - 1]?.content || '',
       response: null,
       error: null,
@@ -686,11 +686,15 @@ class AiClient {
         step1MaxTokens: 1500, step2MaxTokens: 800, logPrefix: 'coaching', timeoutMs: 120000
       })
     } else {
+      // プレイヤーのロールに絞った知識テキストを生成
+      const posToRole = { TOP: 'TOP', JUNGLE: 'JG', MIDDLE: 'MID', BOTTOM: 'ADC', UTILITY: 'SUP' }
+      const roleKey = posToRole[this.position] || null
+      const knowledgeForRole = roleKey ? buildCoachingKnowledgeText(roleKey) : buildFullGameKnowledgeText()
       result = await this._callApi({
         model: this.qualityModel,
         maxTokens: 4000,
         temperature: 0.3,
-        system: this._buildSystemNoCache(COACHING_PROMPT),
+        system: this._buildSystemNoCache(COACHING_PROMPT, null, knowledgeForRole),
         messages: [{ role: 'user', content: userContent }],
         timeoutMs: 60000,
         logType: 'coaching'

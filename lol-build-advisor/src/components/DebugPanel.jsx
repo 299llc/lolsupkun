@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, RefreshCw, Trash2, ChevronDown, ChevronRight, Copy, Check, Info, Send, MessageSquare } from 'lucide-react'
+import { X, RefreshCw, Trash2, ChevronDown, ChevronRight, Copy, Check, Info, Send, MessageSquare, FileText } from 'lucide-react'
 
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false)
@@ -49,6 +49,9 @@ export function DebugPanel({ onClose }) {
   const [logs, setLogs] = useState([])
   const [expanded, setExpanded] = useState(null)
   const [debugState, setDebugState] = useState(null)
+  const [promptPreview, setPromptPreview] = useState(null)
+  const [previewExpanded, setPreviewExpanded] = useState(null)
+  const [previewRole, setPreviewRole] = useState('')
 
   const refresh = async () => {
     const data = await window.electronAPI?.getAiLogs()
@@ -65,7 +68,12 @@ export function DebugPanel({ onClose }) {
     setDebugState(state || null)
   }
 
-  useEffect(() => { refresh() }, [])
+  const fetchPromptPreview = async (role) => {
+    const data = await window.electronAPI?.getPromptPreview(role || undefined)
+    setPromptPreview(data || null)
+  }
+
+  useEffect(() => { refresh(); fetchPromptPreview() }, [])
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
@@ -73,6 +81,9 @@ export function DebugPanel({ onClose }) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-lol-gold/20 shrink-0">
           <span className="font-heading text-xs text-lol-gold tracking-wider">AI DEBUG LOG</span>
           <div className="flex items-center gap-2">
+            <button onClick={fetchPromptPreview} className="text-lol-text hover:text-purple-400" title="Prompt Preview">
+              <FileText size={14} />
+            </button>
             <button onClick={fetchState} className="text-lol-text hover:text-lol-gold" title="Current State">
               <Info size={14} />
             </button>
@@ -123,7 +134,83 @@ export function DebugPanel({ onClose }) {
             </div>
           )}
 
-          {logs.length === 0 && !debugState && (
+          {promptPreview && (
+            <div className="rounded border border-purple-400/30 bg-lol-bg">
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="text-[10px] font-heading tracking-wider text-purple-400">PROMPT PREVIEW</span>
+                <div className="flex items-center gap-2">
+                  {promptPreview.detectedRole !== '未検出' && (
+                    <span className="text-[9px] text-lol-text">検出: <span className="text-lol-blue">{promptPreview.detectedRole}</span></span>
+                  )}
+                  <select
+                    value={previewRole}
+                    onChange={(e) => {
+                      setPreviewRole(e.target.value)
+                      fetchPromptPreview(e.target.value || undefined)
+                    }}
+                    className="px-1.5 py-0.5 text-[10px] bg-lol-surface border border-lol-gold-dim/30 rounded text-lol-gold focus:outline-none focus:border-purple-400/50"
+                  >
+                    <option value="">自動検出</option>
+                    <option value="TOP">TOP</option>
+                    <option value="JG">JG</option>
+                    <option value="MID">MID</option>
+                    <option value="ADC">ADC</option>
+                    <option value="SUP">SUP</option>
+                  </select>
+                  <button onClick={() => setPromptPreview(null)} className="text-lol-text hover:text-lol-text-light">
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+              <div className="px-3 pb-3 space-y-1.5">
+                {[
+                  { key: 'build', label: 'BUILD', color: 'text-lol-gold', border: 'border-lol-gold/30' },
+                  { key: 'matchup', label: 'MATCHUP', color: 'text-purple-400', border: 'border-purple-400/30' },
+                  { key: 'coaching', label: 'COACHING', color: 'text-green-400', border: 'border-green-400/30' },
+                ].map(({ key, label, color, border }) => {
+                  const data = promptPreview[key]
+                  if (!data) return null
+                  const isOpen = previewExpanded === key
+                  return (
+                    <div key={key} className={`rounded border ${border} bg-lol-surface`}>
+                      <button
+                        onClick={() => setPreviewExpanded(isOpen ? null : key)}
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-left"
+                      >
+                        {isOpen ? <ChevronDown size={10} className="text-lol-text" /> : <ChevronRight size={10} className="text-lol-text" />}
+                        <span className={`text-[10px] font-heading tracking-wider ${color}`}>{label}</span>
+                        <span className="text-[10px] text-lol-text ml-auto">{(data.knowledgeChars / 1000).toFixed(1)}k chars</span>
+                      </button>
+                      {isOpen && (
+                        <div className="px-3 pb-2 space-y-1.5">
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] text-lol-blue font-heading tracking-wider">KNOWLEDGE</span>
+                              <CopyButton text={data.knowledge} />
+                            </div>
+                            <pre className="text-[10px] text-lol-text-light bg-lol-bg rounded p-2 mt-0.5 whitespace-pre-wrap max-h-48 overflow-y-auto select-text cursor-text border-l-2 border-lol-blue/30">
+                              {data.knowledge}
+                            </pre>
+                          </div>
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] text-cyan-400 font-heading tracking-wider">PROMPT</span>
+                              <CopyButton text={data.prompt} />
+                            </div>
+                            <pre className="text-[10px] text-lol-text-light bg-lol-bg rounded p-2 mt-0.5 whitespace-pre-wrap max-h-32 overflow-y-auto select-text cursor-text border-l-2 border-cyan-400/30">
+                              {data.prompt}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {logs.length === 0 && !debugState && !promptPreview && (
             <p className="text-xs text-lol-text text-center py-8">ログはまだありません。AI を動かしてから再読み込みしてください。</p>
           )}
 
@@ -166,6 +253,11 @@ export function DebugPanel({ onClose }) {
                       {log.sessionInfo.kind}:{log.sessionInfo.continued ? '継続' : '新規'}
                     </span>
                   )}
+                  {log.type === 'macro' && log.sessionInfo?.trigger && (
+                    <span className="text-[10px] shrink-0 text-cyan-400" title={log.sessionInfo.trigger}>
+                      trigger:{log.sessionInfo.trigger}
+                    </span>
+                  )}
                   {log.model && (
                     <span className="text-[10px] shrink-0 text-lol-gold" title={log.model}>
                       {log.model}
@@ -188,6 +280,9 @@ export function DebugPanel({ onClose }) {
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-lol-text-light">
                             <span>種別: <span className="text-lol-blue">{log.sessionInfo.kind || '-'}</span></span>
                             <span>状態: <span className={log.sessionInfo.continued ? 'text-green-400' : 'text-lol-blue'}>{log.sessionInfo.continued ? '継続' : '新規'}</span></span>
+                            {log.sessionInfo.trigger && (
+                              <span className="col-span-2">trigger: <span className="text-cyan-400">{log.sessionInfo.trigger}</span></span>
+                            )}
                             <span className="col-span-2">previous_interaction_id: <span className="text-lol-blue" title={log.sessionInfo.previousInteractionId || '-'}>{shortId(log.sessionInfo.previousInteractionId)}</span></span>
                             <span className="col-span-2">current_interaction_id: <span className="text-lol-blue" title={log.sessionInfo.interactionId || '-'}>{shortId(log.sessionInfo.interactionId)}</span></span>
                           </div>

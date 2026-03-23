@@ -237,7 +237,7 @@ export function CompactView({ status, gameData, coreBuild, aiSuggestion, aiLoadi
               ddragon={ddragon}
               skillOrder={champSelectExtras?.skills?.order}
             />
-            <CompactMacro advice={macroAdvice} loading={macroLoading} />
+            {(macroAdvice || macroLoading) && <CompactMacro advice={macroAdvice} loading={macroLoading} />}
           </>
         ) : (
           <div className="flex items-center justify-center h-full">

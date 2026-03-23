@@ -105,8 +105,9 @@ function handleAiSuggestion(gameData) {
   if (!state.currentMatchAiAllowed) return
 
   // 15分未満はAI提案しない（1〜3品目はコアビルドで十分）
+  // 開発者メニューで時間制限スキップが有効な場合はこの制限を無視する
   const gameTime = gameData.gameData?.gameTime || 0
-  if (gameTime < 900) return
+  if (gameTime < 900 && !state.debugSkipTimeLimit) return
 
   if (state.aiPending || !state.aiClient || !state.aiEnabled || !state.currentCoreBuild) return
 
