@@ -141,31 +141,31 @@ class AiClient {
    * @param {string} [extraContext] - 追加の静的コンテキスト（チーム構成等、試合中不変）
    * @param {string} [knowledgeOverride] - RAG用: タスク別知識テキスト（省略時はフル知識）
    */
-  _buildSystemNoCache(taskPrompt, extraContext, knowledgeOverride) {
+  _buildSystemNoCache(taskPrompt, extraContext, knowledgeOverride, { includeStatic = true } = {}) {
     const knowledgeText = knowledgeOverride || (this._gameKnowledgeText || (this._gameKnowledgeText = buildFullGameKnowledgeText()))
     const blocks = [
       { type: 'text', text: knowledgeText },
       { type: 'text', text: taskPrompt },
     ]
-    if (this.championKnowledge) {
+    if (includeStatic && this.championKnowledge) {
       blocks.push({ type: 'text', text: this.championKnowledge })
     }
-    if (extraContext) {
+    if (includeStatic && extraContext) {
       blocks.push({ type: 'text', text: extraContext })
     }
     return blocks
   }
 
-  _buildSystem(taskPrompt, extraContext, knowledgeOverride) {
+  _buildSystem(taskPrompt, extraContext, knowledgeOverride, { includeStatic = true } = {}) {
     const knowledgeText = knowledgeOverride || (this._gameKnowledgeText || (this._gameKnowledgeText = buildFullGameKnowledgeText()))
     const blocks = [
       { type: 'text', text: knowledgeText, cache_control: { type: 'ephemeral' } },
       { type: 'text', text: taskPrompt, cache_control: { type: 'ephemeral' } },
     ]
-    if (this.championKnowledge) {
+    if (includeStatic && this.championKnowledge) {
       blocks.push({ type: 'text', text: this.championKnowledge, cache_control: { type: 'ephemeral' } })
     }
-    if (extraContext) {
+    if (includeStatic && extraContext) {
       blocks.push({ type: 'text', text: extraContext, cache_control: { type: 'ephemeral' } })
     }
     return blocks
@@ -477,36 +477,21 @@ class AiClient {
       ? this._buildUserMessage(structuredInput)
       : JSON.stringify(structuredInput, null, 2)
     const isLocal = this.isLocalLLM()
+    // 初回判定: 静的情報（championKnowledge/matchContext）は初回のみsystemに含める
+    const isFirstSuggestion = this.totalCalls === 0
 
     let aiResult
     if (!isLocal && this._isGeminiInteractionCapable()) {
       const session = this.getInteractionSession('build')
-      const staticPayload = {
-        me: structuredInput?.me ? {
-          champion: structuredInput.me.champion,
-          role: structuredInput.me.role,
-        } : null,
-        core_build: structuredInput?.core_build || [],
-        enemy_skills: structuredInput?.enemy_skills || [],
-        enemy_healing: structuredInput?.enemy_healing,
-        enemy_cc_level: structuredInput?.enemy_cc_level,
-      }
-      const dynamicPayload = session.bootstrapped ? {
-        me: structuredInput?.me,
-        enemy_damage_profile: structuredInput?.enemy_damage_profile,
-        enemy_threats: structuredInput?.enemy_threats,
-        situation: structuredInput?.situation,
-        candidates: structuredInput?.candidates,
-      } : structuredInput
 
       const interactionMessage = session.bootstrapped
-        ? JSON.stringify({ update_type: 'build_update', dynamic_context: dynamicPayload }, null, 2)
-        : JSON.stringify({ update_type: 'build_bootstrap', static_context: staticPayload, dynamic_context: dynamicPayload }, null, 2)
+        ? JSON.stringify({ update_type: 'build_update', dynamic_context: structuredInput }, null, 2)
+        : JSON.stringify({ update_type: 'build_bootstrap', dynamic_context: structuredInput }, null, 2)
 
       aiResult = await this._callInteractionApi({
         kind: 'build',
         model: this.suggestionModel, maxTokens: 600, temperature: 0,
-        system: this._buildSystem(ITEM_PROMPT, this.matchContext, buildItemKnowledgeText()),
+        system: this._buildSystem(ITEM_PROMPT, this.matchContext, buildItemKnowledgeText(), { includeStatic: isFirstSuggestion }),
         messages: [{ role: 'user', content: interactionMessage }],
         timeoutMs: 30000, logType: 'suggestion',
         jsonSchema: ITEM_RESPONSE_SCHEMA
@@ -515,7 +500,7 @@ class AiClient {
     if (isLocal) {
       // ローカルLLM: マルチターンを避け、1メッセージにまとめる
       const parts = []
-      if (this.matchContext) parts.push(this.matchContext)
+      if (isFirstSuggestion && this.matchContext) parts.push(this.matchContext)
       parts.push(userMessage)
       aiResult = await this._twoStepLocal({
         step1System: LOCAL_ITEM_STEP1_PROMPT, step2System: LOCAL_ITEM_STEP2_PROMPT,
@@ -527,7 +512,7 @@ class AiClient {
       const itemKnowledge = buildItemKnowledgeText()
       aiResult = await this._callApi({
         model: this.suggestionModel, maxTokens: 600, temperature: 0,
-        system: this._buildSystem(ITEM_PROMPT, this.matchContext, itemKnowledge),
+        system: this._buildSystem(ITEM_PROMPT, this.matchContext, itemKnowledge, { includeStatic: isFirstSuggestion }),
         messages: [{ role: 'user', content: userMessage }],
         timeoutMs: 30000, logType: 'suggestion'
       })

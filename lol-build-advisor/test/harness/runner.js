@@ -161,9 +161,42 @@ const callers = {
   coaching: (client, fixture) => client.getCoaching(fixture),
 }
 
+// ── .env からモデル設定読み込み ──
+function loadModelOpts(providerType) {
+  const envPath = path.join(__dirname, '..', '..', '.env')
+  const env = {}
+  try {
+    for (const line of fs.readFileSync(envPath, 'utf-8').split('\n')) {
+      const t = line.trim(); if (!t || t.startsWith('#')) continue
+      const eq = t.indexOf('='); if (eq < 0) continue
+      env[t.substring(0, eq).trim()] = t.substring(eq + 1).trim()
+    }
+  } catch { return {} }
+
+  if (providerType === 'gemini') {
+    return {
+      ...(env.GEMINI_MODEL && { model: env.GEMINI_MODEL }),
+      ...(env.GEMINI_QUALITY_MODEL && { qualityModel: env.GEMINI_QUALITY_MODEL }),
+      ...(env.GEMINI_SUGGESTION_MODEL && { suggestionModel: env.GEMINI_SUGGESTION_MODEL }),
+      ...(env.GEMINI_MATCHUP_MODEL && { matchupModel: env.GEMINI_MATCHUP_MODEL }),
+      ...(env.GEMINI_MACRO_MODEL && { macroModel: env.GEMINI_MACRO_MODEL }),
+      ...(env.GEMINI_COACHING_MODEL && { coachingModel: env.GEMINI_COACHING_MODEL }),
+    }
+  }
+  return {
+    ...(env.CLAUDE_MODEL && { model: env.CLAUDE_MODEL }),
+    ...(env.CLAUDE_QUALITY_MODEL && { qualityModel: env.CLAUDE_QUALITY_MODEL }),
+    ...(env.CLAUDE_SUGGESTION_MODEL && { suggestionModel: env.CLAUDE_SUGGESTION_MODEL }),
+    ...(env.CLAUDE_MATCHUP_MODEL && { matchupModel: env.CLAUDE_MATCHUP_MODEL }),
+    ...(env.CLAUDE_MACRO_MODEL && { macroModel: env.CLAUDE_MACRO_MODEL }),
+    ...(env.CLAUDE_COACHING_MODEL && { coachingModel: env.CLAUDE_COACHING_MODEL }),
+  }
+}
+
 async function runTests() {
   const provider = createProvider()
-  const client = new AiClient(provider)
+  const modelOpts = loadModelOpts(providerArg)
+  const client = new AiClient(provider, modelOpts)
 
   // バリデーション
   console.log(`\nProvider: ${providerArg}`)
@@ -190,6 +223,9 @@ async function runTests() {
     for (const tc of cases) {
       results.total++
       process.stdout.write(`  ${tc.name} ... `)
+
+      // テストケースごとにクライアントをリセット（Interactionsセッション・totalCalls初期化）
+      client.clearMatch()
 
       try {
         const startTime = Date.now()

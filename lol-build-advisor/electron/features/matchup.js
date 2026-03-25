@@ -4,7 +4,7 @@
 
 const { getItemById, getSpells } = require('../api/patchData')
 const { fetchMatchupItems } = require('../api/opggClient')
-const { COUNTER_ITEMS, isCompletedItem } = require('../core/config')
+const { isCompletedItem } = require('../core/config')
 
 let state = null
 let broadcast = null
@@ -26,31 +26,20 @@ function findLaneOpponent(enemies, position, logTag) {
   return opponent?.enName ? opponent : null
 }
 
-// ── カウンターアイテム注入 ──
-function injectCounterItems(items, enemies) {
-  const enemyFlags = new Set()
-  for (const e of enemies) {
-    for (const f of (e.flags || [])) enemyFlags.add(f)
-  }
-
-  const existingIds = new Set(items.map(it => String(it.id)))
-  const coreIds = new Set((state.currentCoreBuild?.ids || []).map(String))
-  const toAdd = []
-
-  for (const [flag, counterIds] of Object.entries(COUNTER_ITEMS)) {
-    if (!enemyFlags.has(flag)) continue
-    for (const id of counterIds) {
-      if (existingIds.has(id) || coreIds.has(id)) continue
-      const patchItem = getItemById(id)
+// ── ブーツ候補抽出 ──
+function extractBootsCandidates(analysis, coreIds, seen) {
+  const boots = []
+  for (const entry of (analysis?.boots || [])) {
+    for (const id of (entry.ids || [])) {
+      const idStr = String(id)
+      if (seen.has(idStr) || coreIds.has(idStr)) continue
+      seen.add(idStr)
+      const patchItem = getItemById(idStr)
       if (!patchItem) continue
-      toAdd.push({ id, jaName: patchItem.jaName || id, desc: patchItem.fullDesc || patchItem.description || '' })
-      existingIds.add(id)
+      boots.push({ id: idStr, jaName: patchItem.jaName || idStr, desc: patchItem.fullDesc || patchItem.description || '' })
     }
   }
-  if (toAdd.length > 0) {
-    console.log(`[CounterItems] Injected: ${toAdd.map(it => it.jaName).join(', ')}`)
-  }
-  return [...items, ...toAdd]
+  return boots
 }
 
 // ── フォールバック候補 ──
@@ -60,7 +49,7 @@ function buildFallbackSubstituteItems() {
 
   const seen = new Set()
   const coreIds = new Set((state.currentCoreBuild?.ids || []).map(String))
-  const items = []
+  const items = extractBootsCandidates(analysis, coreIds, seen)
 
   const sources = [
     ...(analysis.fourthItems || []),
@@ -82,9 +71,8 @@ function buildFallbackSubstituteItems() {
   return items.slice(0, 15)
 }
 
-function useFallbackSubstituteItems(enemies) {
-  let fallback = buildFallbackSubstituteItems()
-  if (enemies) fallback = injectCounterItems(fallback, enemies)
+function useFallbackSubstituteItems() {
+  const fallback = buildFallbackSubstituteItems()
   if (fallback.length > 0) {
     if (state.aiClient) state.aiClient.setSubstituteItems(fallback)
     const candidatesForUI = fallback.map(it => {
@@ -109,8 +97,12 @@ function handleMatchupItems(me, resolvedPosition, enemies) {
   fetchMatchupItems(me.enName, laneOpponent.enName, resolvedPosition).then(items => {
     if (items && items.length > 0) {
       const coreIds = new Set((state.currentCoreBuild?.ids || []).map(String))
+      const seen = new Set()
+      const bootsItems = extractBootsCandidates(state.currentAnalysis, coreIds, seen)
+
       const completed = items.reduce((acc, it) => {
-        if (acc.length >= 15 || coreIds.has(String(it.id))) return acc
+        if (acc.length >= 15 || coreIds.has(String(it.id)) || seen.has(String(it.id))) return acc
+        seen.add(String(it.id))
         const patchItem = getItemById(it.id)
         if (!patchItem) { acc.push(it); return acc }
         if (isCompletedItem(patchItem)) {
@@ -118,20 +110,20 @@ function handleMatchupItems(me, resolvedPosition, enemies) {
         }
         return acc
       }, [])
-      const withCounters = injectCounterItems(completed, enemies)
-      state.aiClient.setSubstituteItems(withCounters)
-      const candidatesForUI = withCounters.map(it => ({
+      const allItems = [...bootsItems, ...completed]
+      state.aiClient.setSubstituteItems(allItems)
+      const candidatesForUI = allItems.map(it => ({
         id: it.id, name: it.jaName, image: getItemById(it.id)?.image || null
       }))
       broadcast('substitute:items', candidatesForUI)
-      console.log(`[MatchupItems] ${me.enName} vs ${laneOpponent.enName}: ${withCounters.length} items`)
+      console.log(`[MatchupItems] ${me.enName} vs ${laneOpponent.enName}: ${allItems.length} items (boots: ${bootsItems.length})`)
     } else {
       console.warn('[MatchupItems] No data returned, using fallback')
-      useFallbackSubstituteItems(enemies)
+      useFallbackSubstituteItems()
     }
   }).catch(err => {
     console.error('[MatchupItems] Error:', err.message)
-    useFallbackSubstituteItems(enemies)
+    useFallbackSubstituteItems()
   })
 }
 

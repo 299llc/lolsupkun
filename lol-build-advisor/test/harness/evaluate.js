@@ -28,11 +28,13 @@ function evaluateItem(actual, expected) {
     pass = false
   }
 
+  // ID比較は文字列に正規化して行う
+  const actualIds = actual.recommended.map(r => String(r.id))
+
   // 必須アイテムチェック
   if (expected.must_include) {
-    const actualIds = actual.recommended.map(r => r.id)
     for (const requiredId of expected.must_include) {
-      if (!actualIds.includes(requiredId)) {
+      if (!actualIds.includes(String(requiredId))) {
         details.push(`必須アイテム ${requiredId} が推薦に含まれていない`)
         pass = false
       }
@@ -41,9 +43,8 @@ function evaluateItem(actual, expected) {
 
   // 禁止アイテムチェック
   if (expected.must_not_include) {
-    const actualIds = actual.recommended.map(r => r.id)
     for (const bannedId of expected.must_not_include) {
-      if (actualIds.includes(bannedId)) {
+      if (actualIds.includes(String(bannedId))) {
         details.push(`禁止アイテム ${bannedId} が推薦に含まれている`)
         pass = false
       }
@@ -52,9 +53,10 @@ function evaluateItem(actual, expected) {
 
   // candidatesの範囲内チェック
   if (expected.valid_ids) {
-    for (const r of actual.recommended) {
-      if (!expected.valid_ids.includes(r.id)) {
-        details.push(`候補外アイテム ${r.id} が推薦されている`)
+    const validSet = new Set(expected.valid_ids.map(String))
+    for (const id of actualIds) {
+      if (!validSet.has(id)) {
+        details.push(`候補外アイテム ${id} が推薦されている`)
         pass = false
       }
     }

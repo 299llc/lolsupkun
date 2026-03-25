@@ -1,0 +1,84 @@
+{
+  "me": {
+    "champion": "Garen",
+    "role": "TOP",
+    "level": 10,
+    "items": [
+      6631
+    ],
+    "gold": 900,
+    "status": "behind"
+  },
+  "enemy_damage_profile": {
+    "ad": 80,
+    "ap": 20
+  },
+  "enemy_healing": "none",
+  "enemy_cc_level": "low",
+  "situation": "behind",
+  "candidates": [
+    {
+      "id": "3046",
+      "name": "Phantom Dancer",
+      "tag": "core"
+    },
+    {
+      "id": "3033",
+      "name": "Mortal Reminder",
+      "tag": "core"
+    },
+    {
+      "id": "3006",
+      "name": "バーサーカー ブーツ",
+      "tag": "situational"
+    },
+    {
+      "id": "3742",
+      "name": "デッド マン プレート",
+      "tag": "situational"
+    },
+    {
+      "id": "3031",
+      "name": "インフィニティ エッジ",
+      "tag": "situational"
+    },
+    {
+      "id": "3161",
+      "name": "ショウジンの矛",
+      "tag": "situational"
+    },
+    {
+      "id": "3053",
+      "name": "ステラックの篭手",
+      "tag": "situational"
+    },
+    {
+      "id": "4401",
+      "name": "自然の力",
+      "tag": "situational"
+    }
+  ],
+  "core_build": [
+    {
+      "id": "6631",
+      "name": "Stridebreaker"
+    },
+    {
+      "id": "3046",
+      "name": "Phantom Dancer"
+    },
+    {
+      "id": "3033",
+      "name": "Mortal Reminder"
+    }
+  ],
+  "enemy_skills": [],
+  "enemy_threats": [
+    {
+      "champion": "ダリウス",
+      "reason": "fed",
+      "level": 12
+    }
+  ],
+  "previous_advice": null
+}

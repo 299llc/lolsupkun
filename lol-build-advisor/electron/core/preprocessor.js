@@ -3,7 +3,7 @@ const { extractEnName } = require('../api/contextBuilder')
 const { getItemById, getAllChampions, getSpells } = require('../api/patchData')
 const { extractTraits, detectFlags } = require('./championAnalysis')
 const { objectiveStatus, getAvailableObjectiveNames, getObjectiveTimers } = require('./objectiveTracker')
-const { OBJECTIVES, classifyObjectiveEvents, COUNTER_ITEMS, isCompletedItem } = require('./config')
+const { OBJECTIVES, classifyObjectiveEvents, isCompletedItem } = require('./config')
 const { getGamePhase } = require('./knowledgeDb')
 
 // ロール対面マッピング（同じレーンで対面する相手を特定）
@@ -473,99 +473,30 @@ class Preprocessor {
 
     const ownedItemIds = new Set(gameState.me.items.map(i => String(i.id)))
     const candidates = []
+    const candidateIds = new Set()
 
-    // 1. コアビルド未購入品（最大2個、tag: "core"）
-    let coreCount = 0
+    // 1. コアビルド未購入品（tag: "core"）
     for (const item of coreBuild) {
-      if (coreCount >= 2) break
       const itemId = String(item.id || item.itemId)
       if (ownedItemIds.has(itemId)) continue
       const patchItem = getItemById(itemId)
-      const effect = patchItem
-        ? (patchItem.fullDesc || patchItem.description || '').substring(0, 80)
-        : ''
-      candidates.push({ id: itemId, name: patchItem?.jaName || item.name || itemId, effect, tag: 'core' })
-      coreCount++
+      candidates.push({ id: itemId, name: patchItem?.jaName || item.name || itemId, tag: 'core' })
+      candidateIds.add(itemId)
     }
 
-    // 2. カウンターアイテム（敵構成に対する対策品、最大2個、tag: "counter"）
-    let counterCount = 0
-    const counterCandidateIds = new Set()
-
-    // AP比率30%以上 → MR系アイテムを候補に追加
-    if (gameState.enemy.damageProfile.ap >= 30) {
-      // 3111=マーキュリーブーツ(MR), 3139=QSS系(MR), 3156=マウ=モータス(MR)
-      for (const id of ['3111', '3139', '3156']) {
-        if (!ownedItemIds.has(id)) counterCandidateIds.add(id)
-      }
-    }
-    // ヒーラー2体以上 → 重傷アイテム
-    if (gameState.enemy.healerCount >= 2) {
-      for (const id of (COUNTER_ITEMS.healer || [])) {
-        if (!ownedItemIds.has(id)) counterCandidateIds.add(id)
-      }
-    }
-    // CCレベルhigh → QSS/マーキュリー
-    if (gameState.enemy.ccLevel === 'high') {
-      for (const id of (COUNTER_ITEMS.cc || [])) {
-        if (!ownedItemIds.has(id)) counterCandidateIds.add(id)
-      }
-    }
-
-    // AP<30% → MRアイテムを候補から除外、AD<30% → アーマーアイテムを候補から除外
-    const MR_ITEM_IDS = new Set(['3111', '3139', '3156', '3065', '3190', '3222', '3105'])
-    const ARMOR_ITEM_IDS = new Set(['3075', '3143', '3742', '3047', '3110', '3082'])
-    const apPct = gameState.enemy.damageProfile.ap
-    const adPct = gameState.enemy.damageProfile.ad
-
-    for (const id of counterCandidateIds) {
-      if (counterCount >= 2) break
-      // 既にcoreで追加済みなら除外
-      if (candidates.some(c => c.id === id)) continue
-      // ダメージプロファイルに基づくフィルタ
-      if (apPct < 30 && MR_ITEM_IDS.has(id)) continue
-      if (adPct < 30 && ARMOR_ITEM_IDS.has(id)) continue
-      const patchItem = getItemById(id)
+    // 2. OP.GG入れ替え候補を全件追加（tag: "situational"）
+    for (const item of substituteItems) {
+      const itemId = String(item.id || item.itemId)
+      if (ownedItemIds.has(itemId) || candidateIds.has(itemId)) continue
+      const patchItem = getItemById(itemId)
       if (!patchItem) continue
-      const effect = (patchItem.fullDesc || patchItem.description || '').substring(0, 80)
-      candidates.push({ id, name: patchItem.jaName || id, effect, tag: 'counter' })
-      counterCount++
+      candidates.push({ id: itemId, name: patchItem.jaName || item.name || itemId, tag: 'situational' })
+      candidateIds.add(itemId)
     }
 
-    // 3. 残りからsituational（最大1個、tag: "situational"）
-    if (candidates.length < 5) {
-      for (const item of substituteItems) {
-        const itemId = String(item.id || item.itemId)
-        if (ownedItemIds.has(itemId)) continue
-        if (candidates.some(c => c.id === itemId)) continue
-        const patchItem = getItemById(itemId)
-        if (!patchItem) continue
-        const effect = (patchItem.fullDesc || patchItem.description || '').substring(0, 80)
-        candidates.push({ id: itemId, name: patchItem.jaName || item.name || itemId, effect, tag: 'situational' })
-        break
-      }
-    }
+    const isFirstCall = !this.previousItemAdvice
 
-    // 最大5個に制限
-    const finalCandidates = candidates.slice(0, 5)
-
-    // enemy_healing判定（設計書: 2=needed, 3=required）
-    let enemyHealing = 'none'
-    if (gameState.enemy.healerCount >= 3) enemyHealing = 'required'
-    else if (gameState.enemy.healerCount >= 2) enemyHealing = 'needed'
-
-    // 敵5体のスキル詳細（静的情報: 試合中変わらない）
-    const enemySkills = gameState.enemies.map(e => {
-      const spells = getSpells(e.enName)
-      if (!spells) return { champion: e.champion, skills: null }
-      return {
-        champion: e.champion,
-        passive: spells.passive,
-        spells: spells.spells
-      }
-    })
-
-    return {
+    const result = {
       me: {
         champion: gameState.me.champion,
         role: gameState.me.position,
@@ -574,19 +505,37 @@ class Preprocessor {
         gold: gameState.me.gold,
         status: gameState.me.status
       },
-      enemy_damage_profile: gameState.enemy.damageProfile,
-      enemy_healing: enemyHealing,
-      enemy_cc_level: gameState.enemy.ccLevel || 'low',
       enemy_threats: gameState.enemy.threats,
-      enemy_skills: enemySkills,
       situation: gameState.situation,
-      candidates: finalCandidates,
-      core_build: coreBuild.map(item => ({
-        id: String(item.id || item.itemId),
-        name: item.name || item.jaName || ''
-      })),
+      candidates,
       previous_advice: this.previousItemAdvice
     }
+
+    // 静的情報（試合中変わらない）は初回のみ送信してトークン節約
+    if (isFirstCall) {
+      let enemyHealing = 'none'
+      if (gameState.enemy.healerCount >= 3) enemyHealing = 'required'
+      else if (gameState.enemy.healerCount >= 2) enemyHealing = 'needed'
+
+      result.enemy_damage_profile = gameState.enemy.damageProfile
+      result.enemy_healing = enemyHealing
+      result.enemy_cc_level = gameState.enemy.ccLevel || 'low'
+      result.core_build = coreBuild.map(item => ({
+        id: String(item.id || item.itemId),
+        name: item.name || item.jaName || ''
+      }))
+      result.enemy_skills = gameState.enemies.map(e => {
+        const spells = getSpells(e.enName)
+        if (!spells) return { champion: e.champion, skills: null }
+        return {
+          champion: e.champion,
+          passive: spells.passive,
+          spells: spells.spells
+        }
+      })
+    }
+
+    return result
   }
 
   /**

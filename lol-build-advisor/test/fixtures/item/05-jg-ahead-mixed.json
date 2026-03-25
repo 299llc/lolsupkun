@@ -1,0 +1,73 @@
+{
+  "me": {
+    "champion": "Vi",
+    "role": "JG",
+    "level": 12,
+    "items": [
+      6610
+    ],
+    "gold": 1800,
+    "status": "fed"
+  },
+  "enemy_damage_profile": {
+    "ad": 55,
+    "ap": 45
+  },
+  "enemy_healing": "none",
+  "enemy_cc_level": "low",
+  "situation": "ahead",
+  "candidates": [
+    {
+      "id": "3071",
+      "name": "Black Cleaver",
+      "tag": "core"
+    },
+    {
+      "id": "3026",
+      "name": "Guardian Angel",
+      "tag": "core"
+    },
+    {
+      "id": "3047",
+      "name": "プレート スチールキャップ",
+      "tag": "situational"
+    },
+    {
+      "id": "6333",
+      "name": "デス ダンス",
+      "tag": "situational"
+    },
+    {
+      "id": "3053",
+      "name": "ステラックの篭手",
+      "tag": "situational"
+    },
+    {
+      "id": "3142",
+      "name": "妖夢の霊剣",
+      "tag": "situational"
+    },
+    {
+      "id": "3078",
+      "name": "トリニティ フォース",
+      "tag": "situational"
+    }
+  ],
+  "core_build": [
+    {
+      "id": "6610",
+      "name": "Sundered Sky"
+    },
+    {
+      "id": "3071",
+      "name": "Black Cleaver"
+    },
+    {
+      "id": "3026",
+      "name": "Guardian Angel"
+    }
+  ],
+  "enemy_skills": [],
+  "enemy_threats": [],
+  "previous_advice": null
+}

@@ -1,0 +1,31 @@
+{
+  "me": {
+    "champion": "Garen",
+    "role": "TOP",
+    "level": 10,
+    "items": [3078],
+    "gold": 900,
+    "status": "behind"
+  },
+  "enemy_damage_profile": { "ad": 80, "ap": 20 },
+  "enemy_healing": "none",
+  "enemy_cc_level": "low",
+  "situation": "behind",
+  "candidates": [
+    { "id": "3065", "name": "スピリットビサージュ", "tag": "situational" },
+    { "id": "3143", "name": "ランデュインオーメン", "tag": "counter" },
+    { "id": "3742", "name": "デッドマンプレート", "tag": "situational" },
+    { "id": "3053", "name": "ステラックの篭手", "tag": "core" },
+    { "id": "3075", "name": "ソーンメイル", "tag": "counter" },
+    { "id": "3047", "name": "プレートスチールキャップ", "tag": "counter" }
+  ],
+  "core_build": [
+    { "id": "3078", "name": "トリニティフォース" },
+    { "id": "3053", "name": "ステラックの篭手" }
+  ],
+  "enemy_skills": [],
+  "enemy_threats": [
+    { "champion": "ダリウス", "reason": "fed", "level": 12 }
+  ],
+  "previous_advice": null
+}

@@ -1,0 +1,64 @@
+{
+  "me": {
+    "champion": "Lulu",
+    "role": "SUP",
+    "level": 8,
+    "items": [
+      3504
+    ],
+    "gold": 800,
+    "status": "normal"
+  },
+  "enemy_damage_profile": {
+    "ad": 60,
+    "ap": 40
+  },
+  "enemy_healing": "none",
+  "enemy_cc_level": "high",
+  "situation": "behind",
+  "candidates": [
+    {
+      "id": "6617",
+      "name": "Moonstone Renewer",
+      "tag": "core"
+    },
+    {
+      "id": "3107",
+      "name": "Redemption",
+      "tag": "core"
+    },
+    {
+      "id": "3158",
+      "name": "アイオニア ブーツ",
+      "tag": "situational"
+    },
+    {
+      "id": "6621",
+      "name": "ドーンコア",
+      "tag": "situational"
+    }
+  ],
+  "core_build": [
+    {
+      "id": "3504",
+      "name": "Ardent Censer"
+    },
+    {
+      "id": "6617",
+      "name": "Moonstone Renewer"
+    },
+    {
+      "id": "3107",
+      "name": "Redemption"
+    }
+  ],
+  "enemy_skills": [],
+  "enemy_threats": [
+    {
+      "champion": "レオナ",
+      "reason": "CC連鎖",
+      "level": 9
+    }
+  ],
+  "previous_advice": null
+}

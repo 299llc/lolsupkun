@@ -1,0 +1,84 @@
+{
+  "me": {
+    "champion": "Syndra",
+    "role": "MID",
+    "level": 9,
+    "items": [
+      6655
+    ],
+    "gold": 1300,
+    "status": "normal"
+  },
+  "enemy_damage_profile": {
+    "ad": 50,
+    "ap": 50
+  },
+  "enemy_healing": "required",
+  "enemy_cc_level": "medium",
+  "situation": "even",
+  "candidates": [
+    {
+      "id": "4645",
+      "name": "Shadowflame",
+      "tag": "core"
+    },
+    {
+      "id": "3089",
+      "name": "Rabadon's Deathcap",
+      "tag": "core"
+    },
+    {
+      "id": "3020",
+      "name": "ソーサラー シューズ",
+      "tag": "situational"
+    },
+    {
+      "id": "3157",
+      "name": "ゾーニャの砂時計",
+      "tag": "situational"
+    },
+    {
+      "id": "3135",
+      "name": "ヴォイド スタッフ",
+      "tag": "situational"
+    },
+    {
+      "id": "3102",
+      "name": "バンシー ヴェール",
+      "tag": "situational"
+    },
+    {
+      "id": "4646",
+      "name": "ストームサージ",
+      "tag": "situational"
+    },
+    {
+      "id": "4629",
+      "name": "コズミック ドライブ",
+      "tag": "situational"
+    }
+  ],
+  "core_build": [
+    {
+      "id": "6655",
+      "name": "Luden's Echo"
+    },
+    {
+      "id": "4645",
+      "name": "Shadowflame"
+    },
+    {
+      "id": "3089",
+      "name": "Rabadon's Deathcap"
+    }
+  ],
+  "enemy_skills": [],
+  "enemy_threats": [
+    {
+      "champion": "エイトロックス",
+      "reason": "回復量が高い",
+      "level": 10
+    }
+  ],
+  "previous_advice": null
+}

@@ -1,0 +1,81 @@
+{
+  "me": {
+    "champion": "Kaisa",
+    "role": "ADC",
+    "level": 13,
+    "items": [
+      6672,
+      3124,
+      2510
+    ],
+    "gold": 2200,
+    "status": "normal"
+  },
+  "enemy_damage_profile": {
+    "ad": 65,
+    "ap": 35
+  },
+  "enemy_healing": "none",
+  "enemy_cc_level": "medium",
+  "situation": "even",
+  "candidates": [
+    {
+      "id": "3006",
+      "name": "バーサーカー ブーツ",
+      "tag": "situational"
+    },
+    {
+      "id": "3157",
+      "name": "ゾーニャの砂時計",
+      "tag": "situational"
+    },
+    {
+      "id": "3031",
+      "name": "インフィニティ エッジ",
+      "tag": "situational"
+    },
+    {
+      "id": "3115",
+      "name": "ナッシャー トゥース",
+      "tag": "situational"
+    },
+    {
+      "id": "3089",
+      "name": "ラバドン デスキャップ",
+      "tag": "situational"
+    },
+    {
+      "id": "4645",
+      "name": "シャドウフレイム",
+      "tag": "situational"
+    },
+    {
+      "id": "3026",
+      "name": "ガーディアン エンジェル",
+      "tag": "situational"
+    }
+  ],
+  "core_build": [
+    {
+      "id": "6672",
+      "name": "Kraken Slayer"
+    },
+    {
+      "id": "3124",
+      "name": "Guinsoo's Rageblade"
+    },
+    {
+      "id": "2510",
+      "name": "Dusk and Dawn"
+    }
+  ],
+  "enemy_skills": [],
+  "enemy_threats": [
+    {
+      "champion": "ゼド",
+      "reason": "fed assassin",
+      "level": 15
+    }
+  ],
+  "previous_advice": null
+}
