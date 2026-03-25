@@ -3,7 +3,7 @@
 // findLaneOpponent, injectCounterItems, buildFallbackSubstituteItems, useFallbackSubstituteItems
 
 const { getItemById, getSpells } = require('../api/patchData')
-const { fetchMatchupItems } = require('../api/opggClient')
+const { fetchMatchupItems, fetchMatchupWinRate } = require('../api/opggClient')
 const { isCompletedItem } = require('../core/config')
 
 let state = null
@@ -156,7 +156,13 @@ function handleMatchupTip(me, resolvedPosition, enemies) {
 
   broadcast('matchup:loading', { loading: true, opponent: laneOpponent.championName, opponentPartner: structuredInput.opponent_partner?.champion || null })
 
-  state.aiClient.getMatchupTip(structuredInput).then(rawTip => {
+  // マッチアップ勝率を取得してからAI呼び出し
+  fetchMatchupWinRate(me.enName, laneOpponent.enName, resolvedPosition).catch(() => null).then(winRate => {
+    if (winRate !== null) {
+      structuredInput.matchup_winrate = Math.round(winRate * 1000) / 10 // パーセント（小数点1桁）
+    }
+    return state.aiClient.getMatchupTip(structuredInput)
+  }).then(rawTip => {
     // 後処理
     const tip = state.postprocessor.processMatchupResult(rawTip, structuredInput.opponent)
 

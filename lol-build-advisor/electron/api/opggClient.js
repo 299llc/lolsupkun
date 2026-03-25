@@ -362,4 +362,73 @@ async function fetchMatchupItems(myChampion, opponentChampion, position) {
   }
 }
 
-module.exports = { fetchChampionBuild, buildCoreBuildIds, normalizeChampionName, normalizePosition, fetchMatchupItems }
+/**
+ * マッチアップ勝率を取得（カウンターデータから）
+ * @param {string} myChampion - 自チャンピオン英語名
+ * @param {string} opponentChampion - 対面チャンピオン英語名
+ * @param {string} position - ポジション
+ * @returns {number|null} 自チャンプの勝率 (0-1) or null
+ */
+async function fetchMatchupWinRate(myChampion, opponentChampion, position) {
+  const myKey = normalizeChampionName(myChampion)
+  const oppKey = normalizeChampionName(opponentChampion)
+  const pos = normalizePosition(position)
+
+  console.log(`[OP.GG] Fetching matchup win rate: ${myKey} vs ${oppKey} ${pos}`)
+
+  try {
+    const raw = await mcpCall('lol_get_champion_analysis', {
+      champion: myKey,
+      position: pos,
+      game_mode: 'ranked',
+      desired_output_fields: [
+        'data.summary.positions[].counters[].champion_name',
+        'data.summary.positions[].counters[].play',
+        'data.summary.positions[].counters[].win'
+      ]
+    })
+    if (!raw) return null
+
+    // counters データからplay/winを抽出して勝率計算
+    const counterRegex = new RegExp(
+      `Counter\\(\\d+,"${oppKey}",(\\d+),(\\d+)\\)`, 'i'
+    )
+    const match = raw.match(counterRegex)
+    if (!match) {
+      // champion_name形式でも検索（表示名の場合）
+      const nameRegex = new RegExp(
+        `Counter\\(\\d+,"[^"]*",(\\d+),(\\d+)\\)`, 'g'
+      )
+      // 全カウンターを走査してopponentを探す
+      const allCounters = [...raw.matchAll(/Counter\((\d+),"([^"]*)",(\d+),(\d+)\)/g)]
+      for (const c of allCounters) {
+        const name = normalizeChampionName(c[2])
+        if (name === oppKey) {
+          const play = parseInt(c[3])
+          const win = parseInt(c[4])
+          if (play > 0) {
+            const winRate = win / play
+            console.log(`[OP.GG] Matchup win rate: ${myKey} vs ${oppKey} = ${(winRate * 100).toFixed(1)}% (${play} games)`)
+            return winRate
+          }
+        }
+      }
+      console.log(`[OP.GG] No counter data found for ${oppKey}`)
+      return null
+    }
+
+    const play = parseInt(match[1])
+    const win = parseInt(match[2])
+    if (play > 0) {
+      const winRate = win / play
+      console.log(`[OP.GG] Matchup win rate: ${myKey} vs ${oppKey} = ${(winRate * 100).toFixed(1)}% (${play} games)`)
+      return winRate
+    }
+    return null
+  } catch (err) {
+    console.error(`[OP.GG] Matchup win rate error: ${err.message}`)
+    return null
+  }
+}
+
+module.exports = { fetchChampionBuild, buildCoreBuildIds, normalizeChampionName, normalizePosition, fetchMatchupItems, fetchMatchupWinRate }
