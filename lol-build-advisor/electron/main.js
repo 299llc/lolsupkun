@@ -905,6 +905,11 @@ function resetBuildState() {
     if (macroFeature) state.mainWindow.webContents.send('macro:loading', false)
     state.mainWindow.webContents.send('coaching:loading', false)
     state.mainWindow.webContents.send('position:select', null)
+    state.mainWindow.webContents.send('champselect:team', [])
+    state.mainWindow.webContents.send('champselect:extras', null)
+    state.mainWindow.webContents.send('objectives:status', null)
+    state.mainWindow.webContents.send('rule:alerts', [])
+    state.mainWindow.webContents.send('substitute:error', null)
   }
 }
 

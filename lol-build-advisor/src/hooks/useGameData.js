@@ -35,9 +35,27 @@ export function useGameData() {
     const unsubs = [
       window.electronAPI.onGameStatus((newStatus) => {
         setStatus(prev => {
+          // 新しい試合サイクルに入ったら前回の結果をクリア
+          if (newStatus === 'champselect' && prev !== 'champselect') {
+            setCoaching(null)
+            setCoreBuild(null)
+            setAiSuggestion(null)
+            setAiLoading(false)
+            setMatchupTip(null)
+            setMatchupLoading(false)
+            setSubstituteItems([])
+            setSubstituteError(null)
+            setMacroAdvice(null)
+            setMacroLoading(false)
+            setObjectivesStatus(null)
+            setRuleAlerts([])
+            setPositionSelectChamp(null)
+            setCoachingLoading(false)
+          }
           // ingameに切り替わったら古いコーチング結果をクリア
           if (newStatus === 'ingame' && prev !== 'ingame') {
             setCoaching(null)
+            setCoachingLoading(false)
           }
           return newStatus
         })
