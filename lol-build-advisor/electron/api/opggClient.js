@@ -321,8 +321,8 @@ function buildCoreBuildIds(analysis) {
 }
 
 /**
- * マッチアップ別の候補アイテムを取得
- * @returns {Array<{id: string, jaName: string}>|null}
+ * マッチアップ別の候補アイテム + 試合時間別勝率を取得
+ * @returns {{ items: Array<{id: string, jaName: string}>|null, gameLengths: Array|null }}
  */
 async function fetchMatchupItems(myChampion, opponentChampion, position) {
   const myKey = normalizeChampionName(myChampion)
@@ -336,29 +336,35 @@ async function fetchMatchupItems(myChampion, opponentChampion, position) {
       my_champion: myKey,
       opponent_champion: oppKey,
       position: pos,
-      lang: 'ja_JP'
+      lang: 'en_US'
     })
-    if (!raw) return null
+    if (!raw) return { items: null, gameLengths: null }
 
     const parsed = JSON.parse(raw)
     const lastItems = parsed?.data?.last_items || parsed?.last_items
-    if (!Array.isArray(lastItems)) return null
+    const gameLengths = parsed?.data?.game_lengths || null
 
-    const seen = new Set()
-    const result = []
-    for (const entry of lastItems) {
-      const id = entry.ids?.[0]
-      const name = entry.ids_names?.[0]
-      if (!id || !name || seen.has(id)) continue
-      seen.add(id)
-      result.push({ id: String(id), jaName: name })
+    let items = null
+    if (Array.isArray(lastItems)) {
+      const seen = new Set()
+      items = []
+      for (const entry of lastItems) {
+        const id = entry.ids?.[0]
+        const name = entry.ids_names?.[0]
+        if (!id || !name || seen.has(id)) continue
+        seen.add(id)
+        items.push({ id: String(id), jaName: name })
+      }
     }
 
-    console.log(`[OP.GG] Matchup items: ${result.length} items`)
-    return result
+    if (gameLengths) {
+      console.log(`[OP.GG] Game lengths: ${gameLengths.map(g => `${g.game_length}min=${Math.round(g.rate * 100)}%`).join(', ')}`)
+    }
+    console.log(`[OP.GG] Matchup items: ${items?.length || 0} items`)
+    return { items, gameLengths }
   } catch (err) {
     console.error(`[OP.GG] Matchup items error: ${err.message}`)
-    return null
+    return { items: null, gameLengths: null }
   }
 }
 

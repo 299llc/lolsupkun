@@ -1,5 +1,59 @@
 import { useState } from 'react'
-import { Swords, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { Swords, ChevronDown, ChevronUp, Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+
+// パワーカーブバー
+function PowerCurveBar({ powerCurve }) {
+  if (!powerCurve?.win_rates) return null
+  const { win_rates, trend } = powerCurve
+  const phases = [
+    { label: '序盤', key: 'early', rate: win_rates.early },
+    { label: '中盤', key: 'mid', rate: win_rates.mid },
+    { label: '終盤', key: 'late', rate: win_rates.late },
+  ].filter(p => p.rate !== null)
+
+  if (phases.length === 0) return null
+
+  const getColor = (rate) => {
+    if (rate >= 53) return '#4ade80'   // green
+    if (rate >= 50) return '#0AC8B9'   // teal
+    if (rate >= 47) return '#facc15'   // yellow
+    return '#E84057'                   // red
+  }
+
+  const TrendIcon = trend === 'scaling' ? TrendingUp : trend === 'early_dominant' ? TrendingDown : Minus
+  const trendLabel = trend === 'scaling' ? 'スケーリング型' : trend === 'early_dominant' ? '序盤型' : '安定型'
+  const trendColor = trend === 'scaling' ? '#4ade80' : trend === 'early_dominant' ? '#facc15' : '#888'
+
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+        <span style={{ fontSize: 10, fontWeight: 'bold', color: '#C8AA6E' }}>⚡ パワーカーブ</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 10, color: trendColor }}>
+          <TrendIcon size={10} />
+          {trendLabel}
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 2, height: 24 }}>
+        {phases.map(p => (
+          <div
+            key={p.key}
+            style={{
+              flex: 1, borderRadius: 3, position: 'relative',
+              background: `${getColor(p.rate)}20`,
+              border: `1px solid ${getColor(p.rate)}40`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <span style={{ fontSize: 9, color: '#888' }}>{p.label}</span>
+            <span style={{ fontSize: 10, fontWeight: 'bold', color: getColor(p.rate), marginLeft: 3 }}>
+              {p.rate}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export function MatchupTip({ tip, loading, laningOver = false }) {
   const [manualToggle, setManualToggle] = useState(null)
@@ -64,10 +118,14 @@ export function MatchupTip({ tip, loading, laningOver = false }) {
             </p>
           )}
 
-          {/* Power Spike */}
+          {/* Power Curve (統計ベース) */}
+          {tip.power_curve && <PowerCurveBar powerCurve={tip.power_curve} />}
+
+          {/* Power Spike (AIテキスト) */}
           {tip.power_spike && (
             <p style={{ margin: 0, color: 'rgba(200,170,110,0.9)' }}>
-              <span style={{ fontWeight: 'bold' }}>⚡ パワースパイク</span> {tip.power_spike}
+              {!tip.power_curve && <span style={{ fontWeight: 'bold' }}>⚡ パワースパイク </span>}
+              {tip.power_spike}
             </p>
           )}
         </div>

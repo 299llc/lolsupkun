@@ -107,6 +107,8 @@ const state = {
   // マッチアップ
   matchupItemsLoaded: false,
   matchupTipLoaded: false,
+  matchupGameLengths: null,
+  matchupItemsPromise: null,
 
   _lastSuggFingerprint: null,
 
@@ -870,6 +872,8 @@ function resetBuildState() {
   // マッチアップ
   state.matchupItemsLoaded = false
   state.matchupTipLoaded = false
+  state.matchupGameLengths = null
+  state.matchupItemsPromise = null
   // AI提案
   state.lastSuggestion = null
   state.aiPending = false

@@ -9,6 +9,47 @@ const { isCompletedItem } = require('../core/config')
 let state = null
 let broadcast = null
 
+/**
+ * game_lengths データからパワーカーブを分析
+ * @param {Array} gameLengths - OP.GG の game_lengths 配列
+ * @returns {object|null} { best_phase, trend, win_rates: { early, mid, late } }
+ */
+function analyzeGameLengths(gameLengths) {
+  if (!Array.isArray(gameLengths) || gameLengths.length === 0) return null
+
+  const byTime = {}
+  for (const g of gameLengths) byTime[g.game_length] = g.rate
+
+  const phases = {
+    early: byTime[25] ?? byTime[0] ?? null,
+    mid: byTime[30] ?? null,
+    late: byTime[40] ?? byTime[35] ?? null,
+  }
+
+  const entries = Object.entries(phases).filter(([, v]) => v !== null)
+  if (entries.length === 0) return null
+
+  entries.sort((a, b) => b[1] - a[1])
+  const bestPhase = entries[0][0]
+
+  let trend = 'stable'
+  if (phases.early !== null && phases.late !== null) {
+    const diff = phases.late - phases.early
+    if (diff > 0.03) trend = 'scaling'
+    else if (diff < -0.03) trend = 'early_dominant'
+  }
+
+  return {
+    best_phase: bestPhase,
+    trend,
+    win_rates: {
+      early: phases.early !== null ? Math.round(phases.early * 100) : null,
+      mid: phases.mid !== null ? Math.round(phases.mid * 100) : null,
+      late: phases.late !== null ? Math.round(phases.late * 100) : null,
+    },
+  }
+}
+
 function init(stateRef, broadcastFn) {
   state = stateRef
   broadcast = broadcastFn
@@ -94,7 +135,11 @@ function handleMatchupItems(me, resolvedPosition, enemies) {
   if (!laneOpponent) return
 
   state.matchupItemsLoaded = true
-  fetchMatchupItems(me.enName, laneOpponent.enName, resolvedPosition).then(items => {
+  const matchupPromise = fetchMatchupItems(me.enName, laneOpponent.enName, resolvedPosition)
+  state.matchupItemsPromise = matchupPromise
+  matchupPromise.then(result => {
+    const items = result?.items
+    state.matchupGameLengths = result?.gameLengths || null
     if (items && items.length > 0) {
       const coreIds = new Set((state.currentCoreBuild?.ids || []).map(String))
       const seen = new Set()
@@ -156,10 +201,17 @@ function handleMatchupTip(me, resolvedPosition, enemies) {
 
   broadcast('matchup:loading', { loading: true, opponent: laneOpponent.championName, opponentPartner: structuredInput.opponent_partner?.champion || null })
 
-  // マッチアップ勝率を取得してからAI呼び出し
-  fetchMatchupWinRate(me.enName, laneOpponent.enName, resolvedPosition).catch(() => null).then(winRate => {
+  // マッチアップ勝率 + gameLengths を待ってからAI呼び出し
+  Promise.all([
+    fetchMatchupWinRate(me.enName, laneOpponent.enName, resolvedPosition).catch(() => null),
+    (state.matchupItemsPromise || Promise.resolve(null)).catch(() => null),
+  ]).then(([winRate]) => {
     if (winRate !== null) {
       structuredInput.matchup_winrate = Math.round(winRate * 1000) / 10 // パーセント（小数点1桁）
+    }
+    // gameLengths から power_curve を生成
+    if (state.matchupGameLengths) {
+      structuredInput.power_curve = analyzeGameLengths(state.matchupGameLengths)
     }
     return state.aiClient.getMatchupTip(structuredInput)
   }).then(rawTip => {
@@ -172,6 +224,10 @@ function handleMatchupTip(me, resolvedPosition, enemies) {
       tip.myChampion = me.championName
       tip.mySkills = structuredInput.me?.skills || null
       tip.opponentSkills = structuredInput.opponent?.skills || null
+      // power_curve をUIに渡す
+      if (structuredInput.power_curve) {
+        tip.power_curve = structuredInput.power_curve
+      }
       broadcast('matchup:loading', false)
       broadcast('matchup:tip', tip)
       console.log(`[Pipeline] MatchupTip processed: ${me.enName} vs ${laneOpponent.enName}: ${tip.summary}`)
