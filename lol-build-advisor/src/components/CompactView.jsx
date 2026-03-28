@@ -195,8 +195,54 @@ function CompactMatchup({ tip }) {
   )
 }
 
+function OverlayGuide({ onDismiss }) {
+  return (
+    <div className="flex flex-col gap-3 px-4 py-3">
+      <div className="text-center">
+        <span className="font-heading text-xs text-lol-gold tracking-wider">OVERLAY GUIDE</span>
+      </div>
+      <div className="space-y-2.5 text-[11px] text-white/80 leading-relaxed">
+        <div className="flex items-start gap-2">
+          <div className="shrink-0 mt-0.5 p-1 rounded bg-white/10">
+            <Unlock size={12} className="text-white/60" />
+          </div>
+          <p>
+            右上の<span className="text-lol-blue font-bold">ロックボタン</span>でウィンドウの移動・リサイズができます。
+            好みの位置に配置してください。
+          </p>
+        </div>
+        <div className="flex items-start gap-2">
+          <div className="shrink-0 mt-0.5 p-1 rounded bg-white/10">
+            <Lock size={12} className="text-lol-blue" />
+          </div>
+          <p>
+            位置が決まったら<span className="text-lol-blue font-bold">ロック</span>しましょう。
+            ロック中はゲーム操作の邪魔にならず、クリックがすり抜けます。
+          </p>
+        </div>
+        <div className="px-2 py-1.5 rounded bg-lol-gold/10 border border-lol-gold/20">
+          <p className="text-[10px] text-lol-gold">
+            試合中はロック状態で使うのがおすすめです
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={onDismiss}
+        className="w-full py-1.5 rounded bg-lol-blue/20 border border-lol-blue/30 text-xs text-lol-blue hover:bg-lol-blue/30 transition-colors"
+      >
+        OK
+      </button>
+    </div>
+  )
+}
+
+const GUIDE_SHOWN_KEY = 'overlay-guide-shown'
+
 export function CompactView({ status, gameData, coreBuild, aiSuggestion, aiLoading, substituteItems, macroAdvice, macroLoading, champSelectExtras, matchupTip, embedded = false }) {
   const [locked, setLocked] = useState(true)
+  const [showGuide, setShowGuide] = useState(() => {
+    try { return !localStorage.getItem(GUIDE_SHOWN_KEY) } catch { return true }
+  })
   const ddragon = gameData?.ddragon
   const me = gameData?.players?.me
   const ownedItemIds = new Set((me?.items || []).map(i => String(i.itemID)))
@@ -222,12 +268,19 @@ export function CompactView({ status, gameData, coreBuild, aiSuggestion, aiLoadi
     }
   }
 
+  const dismissGuide = () => {
+    setShowGuide(false)
+    try { localStorage.setItem(GUIDE_SHOWN_KEY, '1') } catch {}
+  }
+
   return (
-    <div className={`${embedded ? 'h-full' : 'h-screen'} flex flex-col overflow-hidden rounded-lg`} style={{ background: 'rgba(1, 10, 19, 0.75)', pointerEvents: (!embedded && locked) ? 'none' : undefined }}>
+    <div className={`${embedded ? 'h-full' : 'h-screen'} flex flex-col overflow-hidden rounded-lg`} style={{ background: 'rgba(1, 10, 19, 0.75)', pointerEvents: (!embedded && locked && !showGuide) ? 'none' : undefined }}>
       {!embedded && <CompactTitleBar status={status} locked={locked} onToggleLock={toggleLock} />}
 
       <div className="flex-1 overflow-y-auto px-3 pt-2 pb-2 space-y-2.5">
-        {isIngame ? (
+        {showGuide && !embedded ? (
+          <OverlayGuide onDismiss={dismissGuide} />
+        ) : isIngame ? (
           <>
             <CompactItems
               coreBuild={coreBuild}
