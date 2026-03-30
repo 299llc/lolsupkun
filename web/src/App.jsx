@@ -682,6 +682,7 @@ function Footer() {
             <a href="#how" className="hover:text-gold transition-colors">使い方</a>
             <a href="#pricing" className="hover:text-gold transition-colors">料金</a>
             <a href="#faq" className="hover:text-gold transition-colors">FAQ</a>
+            <a href="#/privacy" className="hover:text-gold transition-colors">プライバシーポリシー</a>
           </div>
         </div>
         <div className="gold-divider mb-6" />
