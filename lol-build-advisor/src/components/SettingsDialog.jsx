@@ -75,6 +75,28 @@ export function SettingsDialog({ onClose, isDev }) {
             </div>
           </div>
 
+          {/* オーバーレイ自動表示 */}
+          <div className="flex items-center justify-between py-2 px-3 rounded bg-lol-bg border border-lol-gold-dim/30">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <Layers size={14} className="text-lol-text" />
+                <span className="text-xs text-lol-text-light">オーバーレイ自動表示</span>
+              </div>
+              <span className="text-[10px] text-lol-text ml-6">試合開始時に自動で表示し、終了時に閉じる</span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={autoOverlay}
+              onClick={() => handleAutoOverlayChange(!autoOverlay)}
+              className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors duration-200 ${autoOverlay ? 'bg-lol-blue' : 'bg-lol-surface-light'}`}
+            >
+              <span className={`inline-block h-3 w-3 rounded-full bg-white shadow transform transition-transform duration-200 mt-0.5 ${autoOverlay ? 'translate-x-3.5 ml-0' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+
+          <div className="border-t border-lol-gold-dim/20" />
+
           {/* キャッシュ再取得 */}
           <div className="flex items-center justify-between py-2 px-3 rounded bg-lol-bg border border-lol-gold-dim/30">
             <div className="flex flex-col">
@@ -103,26 +125,6 @@ export function SettingsDialog({ onClose, isDev }) {
           {refreshResult && (
             <p className="text-[11px] text-lol-blue text-center">{refreshResult}</p>
           )}
-
-          {/* オーバーレイ自動表示 */}
-          <div className="flex items-center justify-between py-2 px-3 rounded bg-lol-bg border border-lol-gold-dim/30">
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <Layers size={14} className="text-lol-text" />
-                <span className="text-xs text-lol-text-light">オーバーレイ自動表示</span>
-              </div>
-              <span className="text-[10px] text-lol-text ml-6">試合開始時に自動で表示し、終了時に閉じる</span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={autoOverlay}
-              onClick={() => handleAutoOverlayChange(!autoOverlay)}
-              className={`relative inline-flex h-4 w-7 shrink-0 rounded-full transition-colors duration-200 ${autoOverlay ? 'bg-lol-blue' : 'bg-lol-surface-light'}`}
-            >
-              <span className={`inline-block h-3 w-3 rounded-full bg-white shadow transform transition-transform duration-200 mt-0.5 ${autoOverlay ? 'translate-x-3.5 ml-0' : 'translate-x-0.5'}`} />
-            </button>
-          </div>
 
           {/* ── 開発者メニュー（デバッグ時のみ） ── */}
           {isDev && (
