@@ -142,7 +142,7 @@ class RuleEngine {
   }
 
   _checkCS(me, minutes, position) {
-    if (position === 'SUP') return null // サポートはCS不要
+    if (position === 'SUP' || position === 'UTILITY') return null // サポートはCS不要
     if (minutes < 3) return null // 序盤はスキップ
 
     const cs = me.scores?.creepScore || 0
