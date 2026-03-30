@@ -2,7 +2,7 @@
 // main.js から切り出した handleMatchupTip, handleMatchupItems,
 // findLaneOpponent, injectCounterItems, buildFallbackSubstituteItems, useFallbackSubstituteItems
 
-const { getItemById, getSpells } = require('../api/patchData')
+const { getItemById, getSpells, getChampionById } = require('../api/patchData')
 const { fetchMatchupItems, fetchMatchupWinRate } = require('../api/opggClient')
 const { isCompletedItem } = require('../core/config')
 
@@ -270,6 +270,12 @@ function handleTeamStrategy(gameData, me, allies, enemies) {
   }
 }
 
+function _getJaName(player) {
+  if (player.jaName) return player.jaName
+  const info = getChampionById(player.championId || 0)
+  return info?.jaName || player.enName || player.championName || 'Unknown'
+}
+
 function _fetchStrategy(gameData, me, allies, enemies, phase) {
   if (!state.aiClient || !state.aiEnabled || !state.currentMatchAiAllowed) return
 
@@ -277,7 +283,7 @@ function _fetchStrategy(gameData, me, allies, enemies, phase) {
   const myRole = posToRole[me.position] || me.position
 
   const allyTeam = (allies || []).map(p => ({
-    champion: p.jaName || p.enName,
+    champion: _getJaName(p),
     role: posToRole[p.position] || p.position,
     level: p.level || 0,
     kda: `${p.scores?.kills || 0}/${p.scores?.deaths || 0}/${p.scores?.assists || 0}`,
@@ -286,7 +292,7 @@ function _fetchStrategy(gameData, me, allies, enemies, phase) {
   }))
 
   const enemyTeam = (enemies || []).map(p => ({
-    champion: p.jaName || p.enName,
+    champion: _getJaName(p),
     role: posToRole[p.position] || p.position,
     level: p.level || 0,
     kda: `${p.scores?.kills || 0}/${p.scores?.deaths || 0}/${p.scores?.assists || 0}`,
@@ -301,12 +307,12 @@ function _fetchStrategy(gameData, me, allies, enemies, phase) {
 
   const enemyThreats = enemies
     .filter(p => (p.scores?.kills || 0) >= 4)
-    .map(p => ({ champion: p.jaName || p.enName, kills: p.scores?.kills, deaths: p.scores?.deaths }))
+    .map(p => ({ champion: _getJaName(p), kills: p.scores?.kills, deaths: p.scores?.deaths }))
 
   const input = {
     phase,
     game_time: Math.floor(gameData.gameData?.gameTime || 0),
-    me: { champion: me.jaName || me.enName, role: myRole },
+    me: { champion: _getJaName(me), role: myRole },
     ally_team: allyTeam,
     enemy_team: enemyTeam,
     kill_diff: killDiff,
