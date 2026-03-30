@@ -30,7 +30,7 @@ export class ProxyStack extends cdk.Stack {
     // ※ NodejsFunction は日本語パスで esbuild spawn に失敗するため、
     //    事前ビルド済みの dist/ を lambda.Code.fromAsset で参照する
     const proxyFn = new lambda.Function(this, 'GeminiProxy', {
-      functionName: 'lolsup-gemini-proxy',
+      functionName: 'lolsupkun-gemini-proxy',
       code: lambda.Code.fromAsset(path.join(__dirname, '..', 'lambda', 'dist')),
       handler: 'gemini-proxy.handler',
       runtime: lambda.Runtime.NODEJS_22_X,

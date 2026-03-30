@@ -4,7 +4,7 @@ import { ProxyStack } from '../lib/proxy-stack';
 
 const app = new cdk.App();
 
-new ProxyStack(app, 'RorusapoProxyStack', {
+new ProxyStack(app, 'LolSupKunProxyStack', {
   env: {
     region: 'ap-northeast-1',
   },
