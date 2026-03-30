@@ -258,7 +258,7 @@ async function main() {
   if (!fs.existsSync(envPath)) throw new Error('.env が見つかりません')
 
   const env = readEnvFile(envPath)
-  if (!env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY が .env に設定されていません')
+  if (!env.GEMINI_PROXY_URL) throw new Error('GEMINI_PROXY_URL が .env に設定されていません')
 
   const scenariosArg = getArg('scenario')
   const scenarioNames = scenariosArg
@@ -281,7 +281,7 @@ async function main() {
   }
   await loadSpellsForMatch([...spellNames])
 
-  const provider = new GeminiProvider(env.GEMINI_API_KEY)
+  const provider = new GeminiProvider(env.GEMINI_PROXY_URL, env.GEMINI_APP_SECRET || '')
   const client = new AiClient(provider, {
     model: 'gemini-2.5-flash-lite',
     qualityModel: 'gemini-2.5-flash',

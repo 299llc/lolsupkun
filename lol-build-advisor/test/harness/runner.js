@@ -116,12 +116,12 @@ function createProvider() {
       console.error('.env ファイルが見つかりません')
       process.exit(1)
     }
-    const apiKey = env.GEMINI_API_KEY
-    if (!apiKey) {
-      console.error('GEMINI_API_KEY が .env に設定されていません')
+    const proxyUrl = env.GEMINI_PROXY_URL
+    if (!proxyUrl) {
+      console.error('GEMINI_PROXY_URL が .env に設定されていません')
       process.exit(1)
     }
-    return new GeminiProvider(apiKey)
+    return new GeminiProvider(proxyUrl, env.GEMINI_APP_SECRET || '')
   }
 
   // デフォルト: Ollama

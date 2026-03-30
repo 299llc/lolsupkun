@@ -629,13 +629,14 @@ function setupIPC() {
 
   ipcMain.handle('provider:set-gemini', async () => {
     const env = loadEnv()
-    const key = env.GEMINI_API_KEY
-    if (!key) {
-      return { success: false, error: 'GEMINI_API_KEY が .env に見つかりません' }
+    const proxyUrl = env.GEMINI_PROXY_URL
+    const appSecret = env.GEMINI_APP_SECRET || ''
+    if (!proxyUrl) {
+      return { success: false, error: 'GEMINI_PROXY_URL が .env に見つかりません' }
     }
-    const provider = new GeminiProvider(key)
+    const provider = new GeminiProvider(proxyUrl, appSecret)
     const ok = await provider.validate()
-    if (!ok) return { success: false, error: 'Gemini API 接続に失敗しました' }
+    if (!ok) return { success: false, error: 'Gemini Proxy 接続に失敗しました' }
     state.aiClient = new AiClient(provider, _modelOpts('gemini'))
     saveSetting('provider', { type: 'gemini' })
     _stopOllamaIfRunning()
@@ -1656,14 +1657,14 @@ if (!gotTheLock) {
       }
     } else if (savedProvider?.type === 'gemini') {
       _stopOllamaIfRunning()
-      const key = env.GEMINI_API_KEY
-      if (key) {
-        state.aiClient = new AiClient(new GeminiProvider(key), _restoreModelOpts('gemini'))
-        console.log('[Provider] Restored Gemini from .env')
+      const proxyUrl = env.GEMINI_PROXY_URL
+      if (proxyUrl) {
+        state.aiClient = new AiClient(new GeminiProvider(proxyUrl, env.GEMINI_APP_SECRET || ''), _restoreModelOpts('gemini'))
+        console.log('[Provider] Restored Gemini (proxy) from .env')
         if (state.geminiModel) console.log(`[Config] model=${state.geminiModel}`)
         if (state.geminiQualityModel) console.log(`[Config] qualityModel=${state.geminiQualityModel}`)
       } else {
-        console.log('[Provider] No GEMINI_API_KEY in .env')
+        console.log('[Provider] No GEMINI_PROXY_URL in .env')
       }
     } else {
       // プロバイダー未設定 → Ollamaが起動していれば自動接続

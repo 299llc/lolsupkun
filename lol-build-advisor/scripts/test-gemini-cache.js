@@ -4,7 +4,7 @@
  * 3回だけAPIを呼び、2回目以降でキャッシュヒット（cachedContentTokenCount > 0）するか確認
  *
  * Usage: node scripts/test-gemini-cache.js
- * 環境変数 GEMINI_API_KEY が必要（.env から自動読込）
+ * 環境変数 GEMINI_PROXY_URL が必要（.env から自動読込）
  */
 
 const path = require('path')
@@ -22,14 +22,14 @@ if (fs.existsSync(envPath)) {
 const { GeminiProvider } = require('../electron/api/providers/geminiProvider')
 const { buildMacroKnowledgeText, buildFullGameKnowledgeText } = require('../electron/core/knowledge/game')
 
-const apiKey = process.env.GEMINI_API_KEY
-if (!apiKey) {
-  console.error('GEMINI_API_KEY が設定されていません（.env を確認）')
+const proxyUrl = process.env.GEMINI_PROXY_URL
+if (!proxyUrl) {
+  console.error('GEMINI_PROXY_URL が設定されていません（.env を確認）')
   process.exit(1)
 }
 
 async function main() {
-  const provider = new GeminiProvider(apiKey)
+  const provider = new GeminiProvider(proxyUrl, process.env.GEMINI_APP_SECRET || '')
 
   // RAG知識テキスト（macroのドラゴン準備シナリオ）
   const ragKnowledge = buildMacroKnowledgeText(['dragon_prep', 'farm', 'ward'], 'early')

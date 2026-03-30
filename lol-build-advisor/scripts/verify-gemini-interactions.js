@@ -161,12 +161,12 @@ async function main() {
   }
 
   const env = readEnvFile(envPath)
-  const apiKey = env.GEMINI_API_KEY
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY が .env に設定されていません')
+  const proxyUrl = env.GEMINI_PROXY_URL
+  if (!proxyUrl) {
+    throw new Error('GEMINI_PROXY_URL が .env に設定されていません')
   }
 
-  const provider = new GeminiProvider(apiKey)
+  const provider = new GeminiProvider(proxyUrl, env.GEMINI_APP_SECRET || '')
   const client = new AiClient(provider, {
     model: 'gemini-2.5-flash-lite',
     qualityModel: 'gemini-2.5-flash',

@@ -1,19 +1,49 @@
 /**
- * Google Gemini API プロバイダー (BYOK)
+ * Google Gemini API プロバイダー (Lambda Proxy 経由)
  * 明示的キャッシュ (CachedContent API) でシステムプロンプトの再処理コストを削減
  */
 
 const DEFAULT_MODEL = 'gemini-2.5-flash'
-const API_VERSION = 'v1beta'
 const CACHE_TTL = '3600s'        // 1時間（試合時間 + バッファ）
 const MIN_CACHE_CHARS = 4000     // キャッシュ対象の最小文字数（Gemini最低4096トークン、日本語は1文字≈0.5tokなので余裕を持つ）
 
 class GeminiProvider {
-  constructor(apiKey) {
-    this.apiKey = apiKey
+  /**
+   * @param {string} proxyUrl - Lambda Function URL
+   * @param {string} [appSecret] - アプリ固有シークレット（X-App-Secret ヘッダー）
+   */
+  constructor(proxyUrl, appSecret) {
+    this.proxyUrl = proxyUrl.replace(/\/$/, '')
+    this.appSecret = appSecret || ''
     this.type = 'gemini'
     this._cacheMap = new Map()      // systemHash → { name, expiresAt }
     this._cacheInFlight = new Map() // systemHash → Promise<name|null>
+  }
+
+  /**
+   * Lambda Proxy へリクエスト
+   */
+  async _proxyRequest(action, body, { signal, model, cacheName } = {}) {
+    const payload = { action, body }
+    if (model) payload.model = model
+    if (cacheName) payload.cacheName = cacheName
+
+    const res = await fetch(this.proxyUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-App-Secret': this.appSecret,
+      },
+      body: JSON.stringify(payload),
+      signal,
+    })
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '')
+      throw new Error(`HTTP ${res.status}: ${errBody.substring(0, 200)}`)
+    }
+
+    return res
   }
 
   /**
@@ -59,22 +89,11 @@ class GeminiProvider {
 
   async _createCache(model, systemText, hash) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/cachedContents?key=${this.apiKey}`
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: `models/${model}`,
-          systemInstruction: { parts: [{ text: systemText }] },
-          ttl: CACHE_TTL,
-        })
+      const res = await this._proxyRequest('cachedContents', {
+        model: `models/${model}`,
+        systemInstruction: { parts: [{ text: systemText }] },
+        ttl: CACHE_TTL,
       })
-
-      if (!res.ok) {
-        const errBody = await res.text().catch(() => '')
-        console.warn(`[Gemini] Cache creation failed: HTTP ${res.status} ${errBody.substring(0, 150)}`)
-        return null
-      }
 
       const data = await res.json()
       const name = data.name
@@ -95,7 +114,7 @@ class GeminiProvider {
     const entries = [...this._cacheMap.values()]
     this._cacheMap.clear()
     await Promise.allSettled(entries.map(cache =>
-      fetch(`https://generativelanguage.googleapis.com/v1beta/${cache.name}?key=${this.apiKey}`, { method: 'DELETE' })
+      this._proxyRequest('cachedContents:delete', {}, { cacheName: cache.name })
         .then(() => console.log(`[Gemini] Deleted cache: ${cache.name}`))
         .catch(err => console.warn(`[Gemini] Cache delete failed: ${err.message}`))
     ))
@@ -103,7 +122,6 @@ class GeminiProvider {
 
   async sendMessage({ model, maxTokens, temperature = 0, system, messages, signal, jsonMode }) {
     const geminiModel = model || DEFAULT_MODEL
-    const url = `https://generativelanguage.googleapis.com/${API_VERSION}/models/${geminiModel}:generateContent?key=${this.apiKey}`
 
     // system → systemInstruction テキスト化
     let systemText = ''
@@ -144,7 +162,8 @@ class GeminiProvider {
     body.contents = contents
 
     try {
-      return await this._doFetch(url, body, signal)
+      const res = await this._proxyRequest('generateContent', body, { signal, model: geminiModel })
+      return this._parseResponse(await res.json())
     } catch (err) {
       // キャッシュ参照エラー → キャッシュ破棄してリトライ
       if (cacheName && /HTTP (400|404)/.test(err.message)) {
@@ -154,7 +173,8 @@ class GeminiProvider {
         if (systemText) {
           fallbackBody.systemInstruction = { parts: [{ text: systemText }] }
         }
-        return this._doFetch(url, fallbackBody, signal)
+        const res = await this._proxyRequest('generateContent', fallbackBody, { signal, model: geminiModel })
+        return this._parseResponse(await res.json())
       }
       throw err
     }
@@ -162,7 +182,6 @@ class GeminiProvider {
 
   async sendInteraction({ model, maxTokens, temperature = 0, system, messages, previousInteractionId = null, signal, store = true, jsonSchema = null }) {
     const geminiModel = model || DEFAULT_MODEL
-    const url = `https://generativelanguage.googleapis.com/${API_VERSION}/interactions`
 
     let systemText = ''
     if (Array.isArray(system)) {
@@ -181,47 +200,21 @@ class GeminiProvider {
       temperature,
     }
 
-    const body = {
+    const interactionBody = {
       model: `models/${geminiModel}`,
       input,
       store,
       generation_config: generationConfig,
     }
     if (jsonSchema) {
-      body.response_mime_type = 'application/json'
-      body.response_format = jsonSchema
+      interactionBody.response_mime_type = 'application/json'
+      interactionBody.response_format = jsonSchema
     }
-    if (previousInteractionId) body.previous_interaction_id = previousInteractionId
-    if (systemText) body.system_instruction = systemText
+    if (previousInteractionId) interactionBody.previous_interaction_id = previousInteractionId
+    if (systemText) interactionBody.system_instruction = systemText
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': this.apiKey,
-      },
-      body: JSON.stringify(body),
-      signal
-    })
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => '')
-      throw new Error(`HTTP ${res.status}: ${errBody.substring(0, 200)}`)
-    }
+    const res = await this._proxyRequest('interactions', interactionBody, { signal })
     return this._parseInteractionResponse(await res.json())
-  }
-
-  async _doFetch(url, body, signal) {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal
-    })
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => '')
-      throw new Error(`HTTP ${res.status}: ${errBody.substring(0, 200)}`)
-    }
-    return this._parseResponse(await res.json())
   }
 
   _parseResponse(data) {
@@ -274,15 +267,10 @@ class GeminiProvider {
 
   async validate() {
     try {
-      const url = `https://generativelanguage.googleapis.com/${API_VERSION}/models/${DEFAULT_MODEL}:generateContent?key=${this.apiKey}`
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: 'hi' }] }],
-          generationConfig: { maxOutputTokens: 10 }
-        })
-      })
+      const res = await this._proxyRequest('generateContent', {
+        contents: [{ role: 'user', parts: [{ text: 'hi' }] }],
+        generationConfig: { maxOutputTokens: 10 }
+      }, { model: DEFAULT_MODEL })
       return res.ok
     } catch {
       return false

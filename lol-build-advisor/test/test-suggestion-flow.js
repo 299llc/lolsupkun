@@ -109,13 +109,13 @@ async function main() {
   console.log(`削減: ${firstJson.length - secondJson.length} 文字 (${Math.round((1 - secondJson.length / firstJson.length) * 100)}%)`)
 
   // ── Test 4: Gemini API 実呼び出し ──
-  if (!env.GEMINI_API_KEY) {
-    console.log('\n=== Test 4: スキップ (GEMINI_API_KEY 未設定) ===')
+  if (!env.GEMINI_PROXY_URL) {
+    console.log('\n=== Test 4: スキップ (GEMINI_PROXY_URL 未設定) ===')
     return
   }
 
   console.log('\n=== Test 4: Gemini API 初回呼び出し ===')
-  const provider = new GeminiProvider(env.GEMINI_API_KEY)
+  const provider = new GeminiProvider(env.GEMINI_PROXY_URL, env.GEMINI_APP_SECRET || '')
   const ok = await provider.validate()
   if (!ok) { console.error('Provider validation failed'); return }
 
