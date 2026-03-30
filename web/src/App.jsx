@@ -9,6 +9,11 @@ import {
 } from '@/components/ui/accordion'
 import './App.css'
 
+// ---- Data Dragon CDN ----
+const DD = 'https://ddragon.leagueoflegends.com/cdn/14.24.1/img'
+const itemIcon = (id) => `${DD}/item/${id}.png`
+const champIcon = (name) => `${DD}/champion/${name}.png`
+
 // ---- アイコン (SVG インライン) ----
 const IconSword = (props) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -20,11 +25,6 @@ const IconBrain = (props) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-1.77-3.28A3 3 0 0 1 2 13a3 3 0 0 1 2.27-2.92A2.5 2.5 0 0 1 9.5 2Z"/>
     <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 1.77-3.28A3 3 0 0 0 22 13a3 3 0 0 0-2.27-2.92A2.5 2.5 0 0 0 14.5 2Z"/>
-  </svg>
-)
-const IconMap = (props) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
   </svg>
 )
 const IconShield = (props) => (
@@ -60,16 +60,6 @@ const IconBarChart = (props) => (
     <line x1="2" y1="20" x2="22" y2="20"/>
   </svg>
 )
-const IconKey = (props) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/>
-  </svg>
-)
-const IconDownload = (props) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-  </svg>
-)
 const IconCheck = (props) => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <polyline points="20 6 9 17 4 12"/>
@@ -80,6 +70,16 @@ const IconArrowRight = (props) => (
     <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
   </svg>
 )
+const IconStore = (props) => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+  </svg>
+)
+
+// ---- App Icon ----
+const AppIcon = ({ size = 32 }) => (
+  <img src="/icon.png" alt="ろるさぽくん" width={size} height={size} className="rounded" />
+)
 
 // ---- Navbar ----
 function Navbar() {
@@ -87,8 +87,8 @@ function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 border-b" style={{ background: 'rgba(1,10,19,0.9)', backdropFilter: 'blur(12px)', borderColor: 'rgba(200,170,110,0.2)' }}>
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded" style={{ background: 'linear-gradient(135deg, #C8AA6E, #0AC8B9)' }} />
-          <span className="font-orbitron font-bold text-lg text-gold tracking-wider">LoL Build Advisor</span>
+          <AppIcon size={32} />
+          <span className="font-orbitron font-bold text-lg text-gold tracking-wider">ろるさぽくん</span>
         </div>
         <div className="hidden md:flex items-center gap-8 text-sm" style={{ color: '#94a3b8' }}>
           <a href="#features" className="hover:text-gold transition-colors">機能</a>
@@ -97,8 +97,8 @@ function Navbar() {
           <a href="#faq" className="hover:text-gold transition-colors">FAQ</a>
         </div>
         <Button className="font-orbitron text-xs tracking-wider gap-2" style={{ background: 'linear-gradient(135deg, #C8AA6E, #9a7c4a)', color: '#010A13', fontWeight: 700 }}>
-          <IconDownload width={16} height={16} />
-          ダウンロード
+          <IconStore width={16} height={16} />
+          Microsoft Store
         </Button>
       </div>
     </nav>
@@ -116,7 +116,7 @@ function Hero() {
 
       <div className="relative z-10 max-w-4xl mx-auto">
         <Badge className="mb-6 px-4 py-1.5 text-xs tracking-widest font-orbitron" style={{ background: 'rgba(10,200,185,0.15)', color: '#0AC8B9', border: '1px solid rgba(10,200,185,0.4)' }}>
-          AI POWERED · REAL-TIME · FREE TO USE
+          AI POWERED · REAL-TIME · EARLY ACCESS
         </Badge>
 
         <h1 className="font-orbitron font-black mb-6 leading-tight" style={{ fontSize: 'clamp(2.2rem, 5.5vw, 4.5rem)', lineHeight: 1.1 }}>
@@ -128,14 +128,14 @@ function Hero() {
         </h1>
 
         <p className="text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed" style={{ color: '#94a3b8', fontWeight: 300 }}>
-          League of Legends の試合中、<span style={{ color: '#0AC8B9' }}>Claude AI</span> がビルド提案・マクロ指示・対面対策を<br className="hidden md:block" />
+          League of Legends の試合中、<span style={{ color: '#0AC8B9' }}>AI</span> がビルド提案・対面対策・試合後コーチングを<br className="hidden md:block" />
           リアルタイムで提供。ビルドに悩む時間はもう終わり。
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Button size="lg" className="font-orbitron font-bold text-sm tracking-wider px-8 h-14 glow-gold gap-2" style={{ background: 'linear-gradient(135deg, #C8AA6E, #9a7c4a)', color: '#010A13', minWidth: 220 }}>
-            <IconDownload width={18} height={18} />
-            無料でダウンロード
+            <IconStore width={18} height={18} />
+            Microsoft Storeで入手
           </Button>
           <a href="#features">
             <Button size="lg" variant="outline" className="font-orbitron text-sm tracking-wider px-8 h-14 gap-2" style={{ borderColor: 'rgba(200,170,110,0.4)', color: '#C8AA6E', background: 'transparent' }}>
@@ -146,15 +146,18 @@ function Hero() {
         </div>
 
         <p className="mt-5 text-xs" style={{ color: '#475569' }}>
-          Windows 10/11 対応 · Anthropic APIキーが必要（BYOK） · Vanguard 互換確認済み
+          Windows 10/11 対応 · Early Access中はAI無制限 · Vanguard 互換確認済み
         </p>
       </div>
 
-      {/* モックUI */}
-      <div className="relative z-10 mt-16 max-w-xl w-full mx-auto animate-float">
+      {/* モックUI — 大きめに表示 */}
+      <div className="relative z-10 mt-12 max-w-2xl w-full mx-auto animate-float">
         <div className="rounded-xl overflow-hidden border" style={{ background: '#0A1428', borderColor: 'rgba(200,170,110,0.3)', boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(200,170,110,0.1)' }}>
           <div className="flex items-center justify-between px-4 py-2 border-b" style={{ background: '#010A13', borderColor: 'rgba(200,170,110,0.2)' }}>
-            <span className="font-orbitron text-xs text-gold tracking-wider">LoL Build Advisor</span>
+            <div className="flex items-center gap-2">
+              <AppIcon size={18} />
+              <span className="font-orbitron text-xs text-gold tracking-wider">ろるさぽくん</span>
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-xs" style={{ color: '#0AC8B9' }}>● LIVE</span>
               <div className="flex gap-1.5">
@@ -172,26 +175,29 @@ function Hero() {
                 <Badge style={{ background: 'rgba(200,170,110,0.2)', color: '#C8AA6E', border: 'none', fontSize: 10, padding: '1px 6px' }}>優勢</Badge>
               </div>
               <div className="flex gap-2">
-                {["Trinity Force", "Sterak's", "Dead Man's"].map((item, i) => (
+                {[{ id: 3078, name: "Trinity Force" }, { id: 3053, name: "Sterak's" }, { id: 3742, name: "Dead Man's" }].map((item, i) => (
                   <div key={i} className="flex-1 rounded p-2 text-center" style={{ background: i === 0 ? 'rgba(200,170,110,0.15)' : 'rgba(255,255,255,0.05)', border: `1px solid ${i === 0 ? 'rgba(200,170,110,0.4)' : 'rgba(255,255,255,0.1)'}` }}>
-                    <div className="w-8 h-8 rounded mx-auto mb-1" style={{ background: i === 0 ? 'rgba(200,170,110,0.3)' : 'rgba(255,255,255,0.1)' }} />
-                    <span style={{ fontSize: 9, color: i === 0 ? '#C8AA6E' : '#94a3b8' }}>{item}</span>
+                    <img src={itemIcon(item.id)} alt={item.name} className="w-8 h-8 rounded mx-auto mb-1" />
+                    <span style={{ fontSize: 9, color: i === 0 ? '#C8AA6E' : '#94a3b8' }}>{item.name}</span>
                   </div>
                 ))}
               </div>
             </div>
             <div className="rounded-lg p-3 border" style={{ background: '#0A1E32', borderColor: 'rgba(200,170,110,0.2)' }}>
               <div className="flex items-center gap-2 mb-1">
-                <IconMap width={14} height={14} style={{ color: '#C8AA6E' }} />
-                <span className="text-xs font-bold font-orbitron text-gold">マクロアドバイス</span>
+                <IconTarget width={14} height={14} style={{ color: '#C8AA6E' }} />
+                <span className="text-xs font-bold font-orbitron text-gold">マッチアップTip</span>
               </div>
-              <p className="text-xs" style={{ color: '#94a3b8' }}>⚡ ドラゴンがスポーン済み！ボットと協力して確保を優先してください。</p>
+              <p className="text-xs" style={{ color: '#94a3b8' }}>Lv6前に有利トレードを仕掛けよう。相手のultがない間がチャンス。</p>
             </div>
             <div className="flex gap-2 text-xs">
-              {[{ name: 'Garen', kda: '5/1/3', color: '#0AC8B9' }, { name: 'Jinx', kda: '8/2/5', color: '#C8AA6E' }, { name: 'Thresh', kda: '1/0/9', color: '#94a3b8' }].map((p, i) => (
-                <div key={i} className="flex-1 rounded p-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div className="font-bold font-orbitron" style={{ color: p.color, fontSize: 10 }}>{p.name}</div>
-                  <div style={{ color: '#94a3b8', fontSize: 10 }}>{p.kda}</div>
+              {[{ name: 'Garen', champ: 'Garen', kda: '5/1/3', color: '#0AC8B9' }, { name: 'Jinx', champ: 'Jinx', kda: '8/2/5', color: '#C8AA6E' }, { name: 'Thresh', champ: 'Thresh', kda: '1/0/9', color: '#94a3b8' }].map((p, i) => (
+                <div key={i} className="flex-1 rounded p-2 flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <img src={champIcon(p.champ)} alt={p.name} className="w-6 h-6 rounded-full" />
+                  <div>
+                    <div className="font-bold font-orbitron" style={{ color: p.color, fontSize: 10 }}>{p.name}</div>
+                    <div style={{ color: '#94a3b8', fontSize: 10 }}>{p.kda}</div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -202,13 +208,48 @@ function Hero() {
   )
 }
 
+// ---- Early Access Banner ----
+function EarlyAccessBanner() {
+  return (
+    <section className="py-14 px-6 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(10,200,185,0.12), rgba(200,170,110,0.12))', borderBottom: '1px solid rgba(10,200,185,0.2)' }}>
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 blur-3xl" style={{ background: '#0AC8B9' }} />
+        <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full opacity-10 blur-3xl" style={{ background: '#C8AA6E' }} />
+      </div>
+      <div className="max-w-4xl mx-auto text-center relative z-10">
+        <div className="inline-block mb-4 px-5 py-2 rounded-full font-orbitron font-bold text-sm tracking-wider animate-pulse" style={{ background: 'rgba(10,200,185,0.25)', color: '#0AC8B9', border: '2px solid rgba(10,200,185,0.5)', boxShadow: '0 0 20px rgba(10,200,185,0.2)' }}>
+          EARLY ACCESS 限定特典
+        </div>
+        <h2 className="font-orbitron font-bold text-2xl md:text-3xl mb-4" style={{ color: '#e2e8f0' }}>
+          <span style={{ color: '#0AC8B9' }}>今だけ</span>、すべてのAI機能が<span style={{ color: '#C8AA6E' }}>無制限</span>
+        </h2>
+        <p className="text-sm mb-8 max-w-xl mx-auto leading-relaxed" style={{ color: '#94a3b8' }}>
+          正式リリース後、Freeプランには1日5回の制限が入ります。<br />
+          Early Access中にインストールした方は、制限なしでAI機能を使い放題。
+        </p>
+        <div className="inline-flex items-center gap-8 px-8 py-4 rounded-xl" style={{ background: 'rgba(1,10,19,0.7)', border: '1px solid rgba(200,170,110,0.3)', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+          <div className="text-center">
+            <div className="font-orbitron font-bold text-xl" style={{ color: '#475569', textDecoration: 'line-through' }}>1日5回</div>
+            <div className="text-xs mt-1" style={{ color: '#475569' }}>正式リリース後</div>
+          </div>
+          <div className="text-4xl font-black animate-pulse" style={{ color: '#C8AA6E', textShadow: '0 0 20px rgba(200,170,110,0.5)' }}>→</div>
+          <div className="text-center">
+            <div className="font-orbitron font-black text-2xl text-glow-gold" style={{ color: '#C8AA6E' }}>無制限</div>
+            <div className="text-xs mt-1 font-bold" style={{ color: '#0AC8B9' }}>Early Access 限定</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 // ---- Social Proof ----
 function SocialProof() {
   const stats = [
-    { value: '4種', label: 'AIアナリシス', sub: 'ビルド・マッチアップ・マクロ・コーチング' },
+    { value: '3種', label: 'AIアナリシス', sub: 'ビルド・マッチアップ・コーチング' },
     { value: '3秒', label: 'リアルタイム更新', sub: '試合データを3秒ごとに取得' },
-    { value: '~$0.08', label: '1試合のAIコスト', sub: 'Haiku主体で超低コスト運用' },
-    { value: '0円', label: 'アプリ料金', sub: 'BYOK型で完全無料スタート' },
+    { value: '無制限', label: 'Early Access特典', sub: '今だけAI機能が使い放題' },
+    { value: '0円', label: 'Early Access', sub: '今なら全機能無料' },
   ]
   return (
     <section className="py-16 border-b" style={{ background: '#0A1428', borderColor: 'rgba(200,170,110,0.15)' }}>
@@ -231,8 +272,8 @@ function SocialProof() {
 function Problem() {
   const problems = [
     { icon: '😰', title: 'ビルド迷子', desc: '相手の構成に合わせてビルドを変えるべきなのに、毎回同じビルドをコピー。タンクに対してもAP積んでたり…' },
-    { icon: '🗺️', title: 'マクロがわからない', desc: 'キルは取れてるのに気づいたらタワーが折れてる。ドラゴンをいつ取るべきか、バロンファイトのタイミングが掴めない。' },
     { icon: '💀', title: '対面に毎回負ける', desc: '同じチャンプを相手にするたびにやられる。そのチャンプに対してどう立ち回るべきか知らない。' },
+    { icon: '📉', title: '何が悪かったかわからない', desc: '試合に負けても原因がわからない。感覚でプレイし続けて同じミスを繰り返してしまう。' },
   ]
   return (
     <section className="py-24 px-6" style={{ background: '#010A13' }}>
@@ -280,7 +321,7 @@ function FeatureBlock({ badge, icon, title, desc, points, reverse, accentColor =
         </ul>
       </div>
       <div className="flex-1 w-full">
-        <div className="rounded-xl border p-5" style={{ background: '#0A1428', borderColor: `rgba(${rgb},0.3)`, boxShadow: `0 10px 40px rgba(0,0,0,0.4), 0 0 30px rgba(${rgb},0.08)` }}>
+        <div className="rounded-xl border p-5" style={{ background: '#0A1E32', borderColor: `rgba(${rgb},0.3)`, boxShadow: `0 10px 40px rgba(0,0,0,0.4), 0 0 30px rgba(${rgb},0.12)` }}>
           {mockContent}
         </div>
       </div>
@@ -298,13 +339,13 @@ function Features() {
         </div>
         <div className="gold-divider my-8" />
 
-        {/* Feature 1 */}
+        {/* Feature 1: AIアイテム提案 */}
         <FeatureBlock
           badge="AI BUILD SUGGESTION"
           icon={<IconSword />}
           title="リアルタイムAIビルド提案"
-          desc="試合中の戦況（KDA・アイテム・キル差・試合時間）をリアルタイムで分析し、Claude AIが最適なアイテム5つを提案。優勢時は攻撃的に、劣勢時は防御的なビルドを自動切り替え。"
-          points={['戦況3段階ビルド切り替え（優勢/拮抗/劣勢）', '敵の回復・CC・タンク特性を自動検出してカウンター提案', 'OP.GGコアビルドと組み合わせた精度の高い提案', 'アイテム購入・キル発生のたびに即時更新']}
+          desc="試合中の戦況をリアルタイムで分析し、AIが最適なアイテムを提案。優勢時は攻撃的に、劣勢時は防御的なビルドを自動切り替え。"
+          points={['敵構成に合わせたカウンターアイテムを自動提案', 'OP.GGの統計データとAI分析のハイブリッド', 'アイテム購入・キル発生のたびに即時更新', '提案理由も表示されるから判断力が身につく']}
           mockContent={
             <div className="space-y-3">
               <div className="flex items-center gap-2 mb-3">
@@ -312,12 +353,12 @@ function Features() {
                 <span className="text-xs font-bold font-orbitron" style={{ color: '#0AC8B9' }}>AI ITEM SUGGESTION</span>
                 <Badge style={{ background: 'rgba(200,170,110,0.2)', color: '#C8AA6E', border: 'none', fontSize: 10, padding: '1px 6px' }}>優勢 +4K</Badge>
               </div>
-              {[{ name: "Sterak's Gage", reason: '高い生存力でスノーボール加速', stars: 5 }, { name: 'Trinity Force', reason: 'コアビルド完成を優先', stars: 4 }, { name: "Death's Dance", reason: '対AD相手にダメージ軽減', stars: 3 }].map((item, i) => (
+              {[{ id: 3053, name: "Sterak's Gage", reason: '敵のバーストに対抗 — 集団戦での生存力UP', stars: 5 }, { id: 3078, name: 'Trinity Force', reason: 'コアビルド完成でスパイク — 1v1性能が大幅向上', stars: 4 }, { id: 6333, name: "Death's Dance", reason: '対AD3人構成 — ダメージの30%を軽減', stars: 3 }].map((item, i) => (
                 <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg" style={{ background: i === 0 ? 'rgba(200,170,110,0.1)' : 'rgba(255,255,255,0.03)', border: `1px solid ${i === 0 ? 'rgba(200,170,110,0.3)' : 'rgba(255,255,255,0.07)'}` }}>
-                  <div className="w-10 h-10 rounded shrink-0" style={{ background: i === 0 ? 'rgba(200,170,110,0.2)' : 'rgba(255,255,255,0.08)' }} />
+                  <img src={itemIcon(item.id)} alt={item.name} className="w-10 h-10 rounded shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-bold" style={{ color: '#C8AA6E' }}>{item.name}</div>
-                    <div style={{ color: '#475569', fontSize: 10 }}>{item.reason}</div>
+                    <div style={{ color: '#94a3b8', fontSize: 10 }}>{item.reason}</div>
                   </div>
                   <div className="flex gap-0.5">
                     {Array.from({ length: 5 }).map((_, si) => (
@@ -332,70 +373,49 @@ function Features() {
 
         <div className="gold-divider" />
 
-        {/* Feature 2 */}
+        {/* Feature 2: チャンプセレクト分析 */}
         <FeatureBlock
           reverse
-          badge="MACRO ADVICE"
-          icon={<IconMap />}
-          accentColor="#0AC8B9"
-          title="マクロアドバイス"
-          desc="2分ごと、またはオブジェクト取得時にClaude AIが「今すべき行動」を具体的に指示。オブジェクトタイマーを秒単位で管理し、最適なタイミングでファイトを促します。"
-          points={['ドラゴン・バロン・ヴォイドグラブ・ヘラルドのタイマー管理', 'オブジェクト取得可能時は即時アドバイス', '試合フェーズ（序盤/中盤/終盤）を自動判断', '行動理由・警告・次のオブジェクトをセットで提示']}
-          mockContent={
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 mb-2">
-                <IconMap width={14} height={14} style={{ color: '#0AC8B9' }} />
-                <span className="text-xs font-bold font-orbitron" style={{ color: '#0AC8B9' }}>MACRO ADVICE</span>
-                <span className="text-xs" style={{ color: '#475569' }}>24:30</span>
-              </div>
-              <div className="p-3 rounded-lg border" style={{ background: 'rgba(10,200,185,0.08)', borderColor: 'rgba(10,200,185,0.25)' }}>
-                <div className="text-xs font-bold mb-1" style={{ color: '#0AC8B9' }}>⚡ 推奨アクション</div>
-                <p className="text-xs" style={{ color: '#e2e8f0' }}>ボットとミッドを押してからバロンを確保してください。相手ジャングラーは死亡中 (30秒)</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {[{ obj: 'Baron', status: 'スポーン中', icon: '👑', color: '#C8AA6E' }, { obj: 'Dragon', status: '3:45後', icon: '🐉', color: '#94a3b8' }, { obj: 'Void Grub', status: '取得済み', icon: '✅', color: '#475569' }, { obj: 'Herald', status: '消滅済み', icon: '💀', color: '#475569' }].map((o, i) => (
-                  <div key={i} className="p-2 rounded text-xs" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <span>{o.icon}</span> <span className="font-bold" style={{ color: o.color }}>{o.obj}</span>
-                    <div style={{ color: '#475569', fontSize: 10 }}>{o.status}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          }
-        />
-
-        <div className="gold-divider" />
-
-        {/* Feature 3 */}
-        <FeatureBlock
           badge="CHAMP SELECT"
           icon={<IconShield />}
+          accentColor="#0AC8B9"
           title="チャンプセレクト分析"
-          desc="チャンピオン選択中にチーム構成を自動分析。AD/AP比率、CC・回復有無をリアルタイム表示。OP.GGのコアビルド・ルーン・スキルオーダーも先行表示します。"
-          points={['チーム全体のAD/AP比率を視覚化', 'CC・回復・シールド・タンクの有無を自動検出', 'OP.GGからコアビルド・推奨ルーン・スキルオーダーを自動取得', 'チャンプセレクト中にすでに対策を立てられる']}
+          desc="チャンピオン選択中にチーム構成を自動分析。試合が始まる前から対策を立てられます。"
+          points={['味方・敵チームのAD/AP比率・CC・回復を一目で把握', 'OP.GGからコアビルド・推奨ルーン・スキルオーダーを自動取得', '対面マッチアップTipで有利な立ち回りを事前に確認', 'ロード画面の間に試合のゲームプランが立てられる']}
           mockContent={
             <div className="space-y-3">
-              <div className="text-xs font-bold mb-2 font-orbitron" style={{ color: '#C8AA6E' }}>CHAMP SELECT · TEAM ANALYSIS</div>
+              <div className="text-xs font-bold mb-2 font-orbitron" style={{ color: '#0AC8B9' }}>CHAMP SELECT · TEAM ANALYSIS</div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="p-2.5 rounded-lg border" style={{ background: 'rgba(10,200,185,0.08)', borderColor: 'rgba(10,200,185,0.2)' }}>
-                  <div className="text-xs font-bold mb-1" style={{ color: '#0AC8B9' }}>味方チーム</div>
+                  <div className="text-xs font-bold mb-2" style={{ color: '#0AC8B9' }}>味方チーム</div>
+                  <div className="flex gap-1 mb-2">
+                    {['Garen', 'LeeSin', 'Ahri', 'Jinx', 'Lulu'].map(c => (
+                      <img key={c} src={champIcon(c)} alt={c} className="w-7 h-7 rounded-full border" style={{ borderColor: 'rgba(10,200,185,0.3)' }} />
+                    ))}
+                  </div>
                   <div className="flex gap-1 flex-wrap">
-                    {['CC有り', 'タンク有り', 'AD 60%'].map(t => <span key={t} className="px-1.5 py-0.5 rounded" style={{ background: 'rgba(10,200,185,0.15)', color: '#0AC8B9', fontSize: 9 }}>{t}</span>)}
+                    {['CC: 3', 'タンク: 1', 'AD 55%'].map(t => <span key={t} className="px-1.5 py-0.5 rounded" style={{ background: 'rgba(10,200,185,0.15)', color: '#0AC8B9', fontSize: 9 }}>{t}</span>)}
                   </div>
                 </div>
                 <div className="p-2.5 rounded-lg border" style={{ background: 'rgba(232,64,87,0.08)', borderColor: 'rgba(232,64,87,0.2)' }}>
-                  <div className="text-xs font-bold mb-1" style={{ color: '#E84057' }}>敵チーム</div>
+                  <div className="text-xs font-bold mb-2" style={{ color: '#E84057' }}>敵チーム</div>
+                  <div className="flex gap-1 mb-2">
+                    {['Darius', 'Amumu', 'Zed', 'Caitlyn', 'Thresh'].map(c => (
+                      <img key={c} src={champIcon(c)} alt={c} className="w-7 h-7 rounded-full border" style={{ borderColor: 'rgba(232,64,87,0.3)' }} />
+                    ))}
+                  </div>
                   <div className="flex gap-1 flex-wrap">
-                    {['回復有り', 'Fed注意', 'AP 55%'].map(t => <span key={t} className="px-1.5 py-0.5 rounded" style={{ background: 'rgba(232,64,87,0.15)', color: '#E84057', fontSize: 9 }}>{t}</span>)}
+                    {['回復: 1', 'CC: 4', 'AP 40%'].map(t => <span key={t} className="px-1.5 py-0.5 rounded" style={{ background: 'rgba(232,64,87,0.15)', color: '#E84057', fontSize: 9 }}>{t}</span>)}
                   </div>
                 </div>
               </div>
               <div className="p-2.5 rounded-lg border" style={{ background: 'rgba(200,170,110,0.06)', borderColor: 'rgba(200,170,110,0.2)' }}>
                 <div className="text-xs font-bold mb-2" style={{ color: '#C8AA6E' }}>推奨コアビルド (OP.GG)</div>
-                <div className="flex gap-2">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="w-9 h-9 rounded" style={{ background: 'rgba(200,170,110,0.15)', border: '1px solid rgba(200,170,110,0.25)' }} />
+                <div className="flex gap-2 items-center">
+                  {[3078, 3053, 3742, 3156].map((id) => (
+                    <img key={id} src={itemIcon(id)} alt="" className="w-9 h-9 rounded border" style={{ borderColor: 'rgba(200,170,110,0.25)' }} />
                   ))}
+                  <span className="text-xs ml-2" style={{ color: '#475569' }}>勝率 54.2%</span>
                 </div>
               </div>
             </div>
@@ -404,32 +424,47 @@ function Features() {
 
         <div className="gold-divider" />
 
-        {/* Feature 4 */}
+        {/* Feature 3: 試合後AIコーチング */}
         <FeatureBlock
-          reverse
           badge="POST-GAME COACHING"
           icon={<IconTrophy />}
-          accentColor="#0AC8B9"
           title="試合後AIコーチング"
-          desc="試合終了後、Claude Sonnetが試合全体を振り返り。KDA・ビルド選択・マクロ判断を総合評価し、具体的な改善点を提示。毎試合確実に成長できます。"
-          points={['試合全体のパフォーマンスをスコア付きで評価', '良かった点・改善点をセクション別に分析', 'ビルド選択の適切さを振り返り', 'Sonnetモデルによる高品質な分析']}
+          desc="試合終了後、AIが試合全体を振り返り。セクション別のスコアと具体的な改善点で、毎試合確実に成長できます。"
+          points={['レーニング・CS管理・ビルド・マクロの4項目を10点満点で評価', '良かったプレイと改善点を具体的にフィードバック', 'デス原因の分析と次回の対策を提示', '試合を振り返る習慣が自然と身につく']}
           mockContent={
             <div className="space-y-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold font-orbitron" style={{ color: '#0AC8B9' }}>POST-GAME COACHING</span>
-                <Badge style={{ background: 'rgba(10,200,185,0.2)', color: '#0AC8B9', border: 'none', fontSize: 10 }}>VICTORY</Badge>
+                <span className="text-xs font-bold font-orbitron" style={{ color: '#C8AA6E' }}>POST-GAME COACHING</span>
+                <Badge style={{ background: 'rgba(10,200,185,0.2)', color: '#0AC8B9', border: 'none', fontSize: 10 }}>VICTORY · 28:34</Badge>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-center">
-                {[{ label: 'KDA', score: '8.5' }, { label: 'ビルド', score: '7.0' }, { label: 'マクロ', score: '6.5' }].map((s, i) => (
+              <div className="flex items-center gap-4 p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <img src={champIcon('Jinx')} alt="Jinx" className="w-12 h-12 rounded-full border-2" style={{ borderColor: '#C8AA6E' }} />
+                <div>
+                  <div className="font-orbitron font-bold text-sm" style={{ color: '#C8AA6E' }}>Jinx · ADC</div>
+                  <div className="text-xs" style={{ color: '#0AC8B9' }}>8 / 2 / 5 · CS 234 (8.4/min)</div>
+                </div>
+                <div className="ml-auto text-center">
+                  <div className="font-orbitron font-black text-2xl" style={{ color: '#C8AA6E' }}>7.8</div>
+                  <div className="text-xs" style={{ color: '#475569' }}>総合</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5 text-center">
+                {[{ label: 'レーニング', score: '8.5', color: '#0AC8B9' }, { label: 'CS管理', score: '8.0', color: '#0AC8B9' }, { label: 'ビルド', score: '7.5', color: '#C8AA6E' }, { label: 'マクロ', score: '6.5', color: '#C8AA6E' }].map((s, i) => (
                   <div key={i} className="p-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <div className="font-orbitron font-bold text-lg" style={{ color: '#C8AA6E' }}>{s.score}</div>
-                    <div className="text-xs" style={{ color: '#475569' }}>{s.label}</div>
+                    <div className="font-orbitron font-bold text-base" style={{ color: s.color }}>{s.score}</div>
+                    <div style={{ fontSize: 9, color: '#475569' }}>{s.label}</div>
                   </div>
                 ))}
               </div>
-              <div className="p-3 rounded-lg border" style={{ background: 'rgba(10,200,185,0.06)', borderColor: 'rgba(10,200,185,0.2)' }}>
-                <div className="text-xs font-bold mb-1" style={{ color: '#0AC8B9' }}>改善点</div>
-                <p className="text-xs" style={{ color: '#94a3b8' }}>14分以降のオブジェクトファイトへの参加が遅れています。ドラゴンスポーン前にサイドレーンを素早く処理するルートを意識してください。</p>
+              <div className="space-y-2">
+                <div className="p-2.5 rounded-lg" style={{ background: 'rgba(10,200,185,0.06)', border: '1px solid rgba(10,200,185,0.15)' }}>
+                  <div className="text-xs font-bold mb-1" style={{ color: '#0AC8B9' }}>Good</div>
+                  <p style={{ color: '#94a3b8', fontSize: 10 }}>レーニングフェーズで安定してCSを確保し、2キルを獲得。対面のCaitlynに対して射程差を理解した立ち回りができていました。</p>
+                </div>
+                <div className="p-2.5 rounded-lg" style={{ background: 'rgba(232,64,87,0.06)', border: '1px solid rgba(232,64,87,0.15)' }}>
+                  <div className="text-xs font-bold mb-1" style={{ color: '#E84057' }}>改善点</div>
+                  <p style={{ color: '#94a3b8', fontSize: 10 }}>14分のドラゴンファイトで合流が20秒遅れ、チームが4v5で戦闘。サイドウェーブの処理を早めにしてオブジェクトに寄る意識を持ちましょう。</p>
+                </div>
               </div>
             </div>
           }
@@ -442,12 +477,12 @@ function Features() {
 // ---- Feature Grid ----
 function FeatureGrid() {
   const items = [
-    { icon: <IconTarget style={{ color: '#C8AA6E' }} />, title: 'マッチアップTip', desc: '試合開始時に対面チャンプとの戦い方を3行で解説。有利なタイミングと注意点をすぐ把握。' },
-    { icon: <IconClock style={{ color: '#0AC8B9' }} />, title: 'オブジェクトタイマー', desc: 'ドラゴン・バロン・ヴォイドグラブ・ヘラルドの状態を秒単位で追跡・表示。' },
-    { icon: <IconBarChart style={{ color: '#C8AA6E' }} />, title: 'KDAリアルタイム', desc: '全10人のKDA・レベル・アイテムを3秒更新。チャンピオン・アイテムアイコン付き。' },
-    { icon: <IconZap style={{ color: '#0AC8B9' }} />, title: 'スマートな呼び出し制御', desc: 'AI呼び出しを10秒デバウンスで重複排除。コストを抑えながら必要な時に確実に提案。' },
-    { icon: <IconShield style={{ color: '#C8AA6E' }} />, title: '観戦モード対応', desc: '観戦時もプレイヤーを選択してビルド・マッチアップ情報を確認できます。' },
-    { icon: <IconKey style={{ color: '#0AC8B9' }} />, title: 'BYOK（完全無料）', desc: '自分のAnthropicAPIキーを設定するだけ。サーバー不要・月額0円で使い始められます。' },
+    { icon: <IconTarget style={{ color: '#C8AA6E' }} />, title: '対面の攻略法がすぐわかる', desc: '試合開始時に対面チャンプとの戦い方をAIが解説。有利なタイミングと注意点を把握してからレーンに出られます。' },
+    { icon: <IconBarChart style={{ color: '#0AC8B9' }} />, title: '全員のKDAが一目でわかる', desc: '味方・敵10人のKDA・レベル・アイテムをチャンピオンアイコン付きで常時表示。誰がFedしているか瞬時に把握。' },
+    { icon: <IconClock style={{ color: '#C8AA6E' }} />, title: 'オブジェクトを取り逃さない', desc: 'ドラゴン・バロン・ヴォイドグラブ・ヘラルドの状態を秒単位で追跡。スポーンタイミングを逃しません。' },
+    { icon: <IconZap style={{ color: '#0AC8B9' }} />, title: '試合中の操作を邪魔しない', desc: 'コンパクトなオーバーレイで画面を占領しません。チラ見するだけで必要な情報が手に入ります。' },
+    { icon: <IconShield style={{ color: '#C8AA6E' }} />, title: 'Vanguard互換で安心', desc: 'Riot公式のLive Client Data APIのみ使用。Vanguardとの互換性を実機確認済みで、安心して使えます。' },
+    { icon: <IconStore style={{ color: '#0AC8B9' }} />, title: 'インストールも更新もかんたん', desc: 'Microsoft Storeからワンクリックでインストール。アップデートも自動で、常に最新版が使えます。' },
   ]
   return (
     <section className="py-24 px-6" style={{ background: '#0A1428' }}>
@@ -457,15 +492,18 @@ function FeatureGrid() {
           <p className="text-sm" style={{ color: '#94a3b8' }}>細部にもLoLプレイヤーへの配慮が詰まっています</p>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {items.map((item, i) => (
-            <Card key={i} className="card-hover" style={{ background: '#010A13', border: '1px solid rgba(200,170,110,0.15)' }}>
-              <CardContent className="p-5">
-                <div className="mb-3">{item.icon}</div>
-                <h3 className="font-bold mb-2 text-sm" style={{ color: '#e2e8f0' }}>{item.title}</h3>
-                <p className="text-xs leading-relaxed" style={{ color: '#94a3b8' }}>{item.desc}</p>
-              </CardContent>
-            </Card>
-          ))}
+          {items.map((item, i) => {
+            const highlight = i === 0 || i === 2
+            return (
+              <Card key={i} className="card-hover" style={{ background: '#010A13', border: `1px solid ${highlight ? 'rgba(200,170,110,0.35)' : 'rgba(200,170,110,0.15)'}`, boxShadow: highlight ? '0 0 20px rgba(200,170,110,0.06)' : 'none' }}>
+                <CardContent className="p-5">
+                  <div className="mb-3">{item.icon}</div>
+                  <h3 className="font-bold mb-2 text-sm" style={{ color: '#e2e8f0' }}>{item.title}</h3>
+                  <p className="text-xs leading-relaxed" style={{ color: '#94a3b8' }}>{item.desc}</p>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       </div>
     </section>
@@ -475,18 +513,17 @@ function FeatureGrid() {
 // ---- How it works ----
 function HowItWorks() {
   const steps = [
-    { num: '01', icon: <IconDownload width={28} height={28} style={{ color: '#C8AA6E' }} />, title: 'ダウンロード & インストール', desc: 'GitHubからインストーラーをダウンロードして実行するだけ。Windows 10/11に対応。' },
-    { num: '02', icon: <IconKey width={28} height={28} style={{ color: '#0AC8B9' }} />, title: 'Anthropic APIキーを設定', desc: 'Anthropic Consoleで取得したAPIキーをアプリに入力するだけ。設定はローカル保存で安全。' },
-    { num: '03', icon: <IconZap width={28} height={28} style={{ color: '#C8AA6E' }} />, title: 'LoLを起動して試合スタート', desc: 'あとはLoLを起動するだけ。チャンプセレクトから試合終了まで、AIが自動でサポートします。' },
+    { icon: <IconStore width={28} height={28} style={{ color: '#C8AA6E' }} />, title: 'Microsoft Storeからインストール', desc: 'Microsoft Storeで「ろるさぽくん」を検索してインストール。ログインもアカウント作成も不要。' },
+    { icon: <IconZap width={28} height={28} style={{ color: '#0AC8B9' }} />, title: 'LoLを起動して試合スタート', desc: 'あとはLoLを起動するだけ。チャンプセレクトから試合終了まで、AIが自動でサポートします。' },
   ]
   return (
     <section id="how" className="py-24 px-6" style={{ background: '#010A13' }}>
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <div className="text-center mb-16">
           <Badge className="mb-4 text-xs tracking-widest font-orbitron" style={{ background: 'rgba(200,170,110,0.15)', color: '#C8AA6E', border: '1px solid rgba(200,170,110,0.3)' }}>HOW IT WORKS</Badge>
-          <h2 className="font-orbitron font-bold text-3xl md:text-4xl" style={{ color: '#e2e8f0' }}>3ステップで始められる</h2>
+          <h2 className="font-orbitron font-bold text-3xl md:text-4xl" style={{ color: '#e2e8f0' }}>2ステップで始められる</h2>
         </div>
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 gap-12">
           {steps.map((step, i) => (
             <div key={i} className="text-center">
               <div className="w-20 h-20 rounded-full mx-auto mb-5 flex items-center justify-center relative" style={{ background: '#0A1428', border: '2px solid rgba(200,170,110,0.4)' }}>
@@ -509,68 +546,61 @@ function HowItWorks() {
 function Pricing() {
   return (
     <section id="pricing" className="py-24 px-6 border-t border-b" style={{ background: '#0A1428', borderColor: 'rgba(200,170,110,0.1)' }}>
-      <div className="max-w-2xl mx-auto text-center">
+      <div className="max-w-3xl mx-auto text-center">
         <Badge className="mb-4 text-xs tracking-widest font-orbitron" style={{ background: 'rgba(200,170,110,0.15)', color: '#C8AA6E', border: '1px solid rgba(200,170,110,0.3)' }}>PRICING</Badge>
         <h2 className="font-orbitron font-bold text-3xl md:text-4xl mb-4" style={{ color: '#e2e8f0' }}>料金プラン</h2>
-        <p className="mb-10" style={{ color: '#94a3b8' }}>現在はBYOK（Bring Your Own Key）で完全無料。<br />サブスクリプションプランを準備中です。</p>
+        <p className="mb-10" style={{ color: '#94a3b8' }}>Early Access期間中はAI機能が無制限で無料。<br />正式リリース後にFree/Proの2プランに移行します。</p>
         <div className="grid md:grid-cols-2 gap-6">
-          {/* BYOK */}
+          {/* Free */}
           <Card className="border text-left" style={{ background: '#010A13', borderColor: 'rgba(200,170,110,0.3)' }}>
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="font-orbitron text-lg text-gold">BYOK</CardTitle>
-                <Badge style={{ background: 'rgba(10,200,185,0.2)', color: '#0AC8B9', border: 'none' }}>利用可能</Badge>
+                <CardTitle className="font-orbitron text-lg text-gold">Free</CardTitle>
+                <Badge style={{ background: 'rgba(10,200,185,0.2)', color: '#0AC8B9', border: 'none' }}>Early Access: 無制限</Badge>
               </div>
               <div className="mt-2">
-                <span className="font-orbitron font-black text-4xl text-gold">無料</span>
-                <span className="text-sm ml-2" style={{ color: '#94a3b8' }}>+ Anthropic APIコスト</span>
+                <span className="font-orbitron font-black text-4xl text-gold">¥0</span>
+                <span className="text-sm ml-2" style={{ color: '#94a3b8' }}>/月</span>
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              {['全機能が使える', 'APIキーは自己管理', '約$0.08/試合のAPIコスト', 'サーバー不要'].map((f, i) => (
+              {['AI機能1日5回まで', 'アイテム提案・マッチアップTip', '試合後AIコーチング', 'チャンプセレクト分析'].map((f, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm" style={{ color: '#e2e8f0' }}>
                   <span style={{ color: '#0AC8B9' }}><IconCheck /></span>{f}
                 </div>
               ))}
+              <div className="pt-2 px-4 py-3 rounded-lg text-sm text-center font-bold animate-pulse" style={{ background: 'rgba(10,200,185,0.15)', color: '#0AC8B9', border: '2px solid rgba(10,200,185,0.5)', boxShadow: '0 0 15px rgba(10,200,185,0.15)' }}>
+                Early Access中は回数制限なし
+              </div>
               <Button className="w-full mt-4 font-orbitron text-sm font-bold gap-2" style={{ background: 'linear-gradient(135deg, #C8AA6E, #9a7c4a)', color: '#010A13' }}>
-                <IconDownload width={16} height={16} />今すぐ始める
+                <IconStore width={16} height={16} />Storeで入手
               </Button>
             </CardContent>
           </Card>
 
-          {/* Pro - Coming Soon */}
-          <Card className="border text-left relative overflow-hidden" style={{ background: '#010A13', borderColor: 'rgba(200,170,110,0.2)' }}>
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center" style={{ background: 'rgba(1,10,19,0.88)', backdropFilter: 'blur(2px)' }}>
-              <span className="font-orbitron font-black text-2xl mb-2 shimmer-text">COMING SOON</span>
-              <p className="text-xs text-center px-6 leading-relaxed" style={{ color: '#94a3b8' }}>サブスクリプションプランを準備中。<br />下のフォームでリリース通知を受け取る↓</p>
-            </div>
+          {/* Pro */}
+          <Card className="border text-left" style={{ background: '#010A13', borderColor: 'rgba(200,170,110,0.3)' }}>
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="font-orbitron text-lg" style={{ color: '#94a3b8' }}>Pro</CardTitle>
-                <Badge style={{ background: 'rgba(200,170,110,0.1)', color: '#94a3b8', border: 'none' }}>準備中</Badge>
+                <CardTitle className="font-orbitron text-lg text-gold">Pro</CardTitle>
+                <Badge style={{ background: 'rgba(200,170,110,0.2)', color: '#C8AA6E', border: 'none' }}>正式リリース後</Badge>
               </div>
               <div className="mt-2">
-                <span className="font-orbitron font-black text-4xl" style={{ color: '#475569' }}>¥???</span>
-                <span className="text-sm ml-2" style={{ color: '#475569' }}>/月</span>
+                <span className="font-orbitron font-black text-4xl text-gold">¥980</span>
+                <span className="text-sm ml-2" style={{ color: '#94a3b8' }}>/月</span>
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              {['APIキー不要', '無制限AI分析', '優先サポート', '利用量ダッシュボード'].map((f, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm" style={{ color: '#475569' }}>
-                  <span><IconCheck /></span>{f}
+              {['AI機能 無制限', 'アイテム提案・マッチアップTip', '試合後AIコーチング', 'チャンプセレクト分析'].map((f, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm" style={{ color: '#e2e8f0' }}>
+                  <span style={{ color: '#C8AA6E' }}><IconCheck /></span>{f}
                 </div>
               ))}
+              <div className="pt-2 px-3 py-2 rounded-lg text-xs text-center" style={{ background: 'rgba(200,170,110,0.1)', color: '#C8AA6E', border: '1px solid rgba(200,170,110,0.3)' }}>
+                Microsoft Storeサブスクリプション
+              </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* メール登録 */}
-        <div className="mt-10 p-6 rounded-xl border" style={{ background: '#010A13', borderColor: 'rgba(200,170,110,0.2)' }}>
-          <p className="font-bold mb-4" style={{ color: '#e2e8f0' }}>Proプランのリリース通知を受け取る</p>
-          <div className="flex gap-3 max-w-sm mx-auto">
-            <input type="email" placeholder="your@email.com" className="flex-1 px-4 py-2 rounded-lg text-sm outline-none" style={{ background: 'rgba(200,170,110,0.1)', border: '1px solid rgba(200,170,110,0.3)', color: '#e2e8f0' }} />
-            <Button className="font-orbitron text-xs font-bold shrink-0" style={{ background: 'linear-gradient(135deg, #C8AA6E, #9a7c4a)', color: '#010A13' }}>登録</Button>
-          </div>
         </div>
       </div>
     </section>
@@ -580,12 +610,11 @@ function Pricing() {
 // ---- FAQ ----
 function FAQ() {
   const faqs = [
-    { q: 'Anthropic APIキーはどこで取得できますか？', a: 'Anthropic Console（console.anthropic.com）でアカウントを作成し、APIキーを発行してください。クレジットカードの登録が必要ですが、1試合あたり約$0.08と低コストで利用できます。' },
-    { q: '無料で使えますか？', a: 'アプリ自体は無料です。Claude APIの使用料（Anthropicへの支払い）は発生しますが、Haiku主体で1試合約$0.08、1日5試合で月約$12程度です。Prompt Cachingを活用すると最大90%削減できます。' },
+    { q: '無料で使えますか？', a: 'はい。Early Access期間中はAI機能が回数制限なしで無料です。正式リリース後はFreeプラン（1日5回まで）とProプラン（¥980/月、無制限）の2プランになります。' },
+    { q: 'アカウント登録は必要ですか？', a: 'いいえ。Microsoft Storeからインストールするだけで使い始められます。ログインやアカウント作成は不要です。' },
     { q: 'Riot VanguardやアンチチートがElectronをブロックしませんか？', a: '実機テストで動作確認済みです。現時点でVanguardによるブロックは確認されていません。LoLはボーダーレスウィンドウモードでのプレイを推奨します（排他フルスクリーンではオーバーレイが表示されません）。' },
-    { q: 'macOSでは使えますか？', a: '現在はWindows 10/11のみ対応しています。macOS対応は将来のロードマップに含まれています。' },
-    { q: 'Riotの利用規約に違反しませんか？', a: '公式のLive Client Data API（Riot提供）のみを使用しており、ゲーム内の操作を自動化する機能はありません。ToS準拠のツールとして設計されており、配布時はRiot Developer Portalへのアプリ登録も行います。' },
-    { q: 'AIの提案精度はどのくらいですか？', a: 'OP.GGのコアビルドデータ＋戦況（KDA・アイテム・敵構成・試合時間）を組み合わせてClaude AIが判断します。状況に応じた提案が得られますが、最終的なビルド判断はプレイヤーが行ってください。' },
+    { q: 'AIの提案精度はどのくらいですか？', a: 'OP.GGのコアビルドデータ＋戦況（KDA・アイテム・敵構成・試合時間）を組み合わせてAIが判断します。状況に応じた提案が得られますが、最終的なビルド判断はプレイヤーが行ってください。' },
+    { q: 'Early Accessはいつまでですか？', a: '終了時期は未定です。正式リリースに移行する際は事前にお知らせします。Early Access中にインストールしていただければ、移行後もスムーズにご利用いただけます。' },
   ]
   return (
     <section id="faq" className="py-24 px-6" style={{ background: '#010A13' }}>
@@ -622,14 +651,17 @@ function FinalCTA() {
         <h2 className="font-orbitron font-black text-3xl md:text-5xl mb-6 text-glow-gold" style={{ color: '#C8AA6E' }}>
           今すぐ<br />ランクを上げよう
         </h2>
-        <p className="text-lg mb-10" style={{ color: '#94a3b8' }}>
+        <p className="text-lg mb-6" style={{ color: '#94a3b8' }}>
           ビルドに悩む時間を、プレイに使おう。<br />AIがチャンプセレクトから試合終了まで全力サポート。
         </p>
+        <div className="inline-block mb-8 px-5 py-2 rounded-full text-sm font-bold" style={{ background: 'rgba(10,200,185,0.15)', color: '#0AC8B9', border: '1px solid rgba(10,200,185,0.4)' }}>
+          Early Access 限定 — 今ならAI機能が無制限で無料
+        </div>
         <Button size="lg" className="font-orbitron font-bold text-base tracking-wider px-12 h-16 glow-gold gap-2" style={{ background: 'linear-gradient(135deg, #C8AA6E, #9a7c4a)', color: '#010A13', minWidth: 260 }}>
-          <IconDownload width={20} height={20} />
-          無料でダウンロード
+          <IconStore width={20} height={20} />
+          Microsoft Storeで入手
         </Button>
-        <p className="mt-4 text-xs" style={{ color: '#475569' }}>Windows 10/11 · オープンソース · Vanguard互換確認済み</p>
+        <p className="mt-4 text-xs" style={{ color: '#475569' }}>Windows 10/11 · Early Access中はAI無制限 · Vanguard互換確認済み</p>
       </div>
     </section>
   )
@@ -642,8 +674,8 @@ function Footer() {
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded" style={{ background: 'linear-gradient(135deg, #C8AA6E, #0AC8B9)' }} />
-            <span className="font-orbitron font-bold text-gold">LoL Build Advisor</span>
+            <AppIcon size={28} />
+            <span className="font-orbitron font-bold text-gold">ろるさぽくん</span>
           </div>
           <div className="flex gap-8 text-sm" style={{ color: '#475569' }}>
             <a href="#features" className="hover:text-gold transition-colors">機能</a>
@@ -656,7 +688,7 @@ function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs" style={{ color: '#334155' }}>
           <p>© 2026 合同会社299. All rights reserved.</p>
           <p className="text-center md:text-right leading-relaxed">
-            LoL Build Advisor は League of Legends の公式 Live Client Data API を使用しています。<br />
+            ろるさぽくん は League of Legends の公式 Live Client Data API を使用しています。<br />
             Riot Games によって認定・後援・または具体的に承認されたものではなく、Riot Games はその責任を負いません。
           </p>
         </div>
@@ -671,6 +703,7 @@ export default function App() {
     <div className="min-h-screen" style={{ background: '#010A13' }}>
       <Navbar />
       <Hero />
+      <EarlyAccessBanner />
       <SocialProof />
       <Problem />
       <Features />
