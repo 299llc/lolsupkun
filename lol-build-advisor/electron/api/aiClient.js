@@ -6,7 +6,7 @@
  *
  * プロバイダー抽象化: AnthropicProvider (BYOK) / BedrockProvider (AWS) / OllamaProvider (ローカルLLM) を切り替え可能
  */
-const { ITEM_PROMPT, MATCHUP_PROMPT, MACRO_PROMPT, COACHING_PROMPT } = require('../core/prompts')
+const { ITEM_PROMPT, MATCHUP_PROMPT, MACRO_PROMPT, COACHING_PROMPT, MID_STRATEGY_PROMPT, LATE_STRATEGY_PROMPT } = require('../core/prompts')
 const { buildFullGameKnowledgeText, buildCoachingKnowledgeText, buildMacroKnowledgeText, buildItemKnowledgeText, buildLaningKnowledgeText } = require('../core/knowledge/game')
 const {
   LOCAL_ITEM_STEP1_PROMPT, LOCAL_ITEM_STEP2_PROMPT,
@@ -700,6 +700,20 @@ class AiClient {
       return { error: 'うまく取得できませんでした', ...this.lastCoaching }
     }
     return null
+  }
+
+  async getTeamStrategy(structuredInput, phase = 'mid') {
+    const userContent = JSON.stringify(structuredInput, null, 2)
+    const prompt = phase === 'late' ? LATE_STRATEGY_PROMPT : MID_STRATEGY_PROMPT
+
+    const result = await this._callApi({
+      model: this.matchupModel, maxTokens: 700, temperature: 0,
+      system: this._buildSystemNoCache(prompt, null, buildFullGameKnowledgeText()),
+      messages: [{ role: 'user', content: userContent }],
+      timeoutMs: 20000, logType: `strategy-${phase}`
+    })
+
+    return result || null
   }
 
   _pushLog(entry) {

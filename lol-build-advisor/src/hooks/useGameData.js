@@ -20,6 +20,8 @@ export function useGameData() {
   const [objectivesStatus, setObjectivesStatus] = useState(null)
   const [ruleAlerts, setRuleAlerts] = useState([])
   const [champSelectMeta, setChampSelectMeta] = useState(null)
+  const [teamStrategy, setTeamStrategy] = useState(null)
+  const [teamStrategyLoading, setTeamStrategyLoading] = useState(false)
 
   useEffect(() => {
     if (!window.electronAPI) return
@@ -51,6 +53,8 @@ export function useGameData() {
             setObjectivesStatus(null)
             setRuleAlerts([])
             setChampSelectMeta(null)
+            setTeamStrategy(null)
+            setTeamStrategyLoading(false)
             setPositionSelectChamp(null)
             setCoachingLoading(false)
           }
@@ -80,9 +84,11 @@ export function useGameData() {
       window.electronAPI.onObjectivesStatus?.(setObjectivesStatus),
       window.electronAPI.onRuleAlerts?.(setRuleAlerts),
       window.electronAPI.onChampSelectMeta?.(setChampSelectMeta),
+      window.electronAPI.onTeamStrategy?.(setTeamStrategy),
+      window.electronAPI.onTeamStrategyLoading?.(setTeamStrategyLoading),
     ]
     return () => unsubs.forEach(fn => fn?.())
   }, [])
 
-  return { status, gameData, coreBuild, aiSuggestion, aiLoading, positionSelectChamp, substituteItems, champSelectTeam, coaching, coachingLoading, substituteError, matchupTip, matchupLoading, champSelectExtras, macroAdvice, macroLoading, objectivesStatus, ruleAlerts, champSelectMeta }
+  return { status, gameData, coreBuild, aiSuggestion, aiLoading, positionSelectChamp, substituteItems, champSelectTeam, coaching, coachingLoading, substituteError, matchupTip, matchupLoading, champSelectExtras, macroAdvice, macroLoading, objectivesStatus, ruleAlerts, champSelectMeta, teamStrategy, teamStrategyLoading }
 }

@@ -249,9 +249,91 @@ function handleMatchupTip(me, resolvedPosition, enemies) {
   })
 }
 
+/**
+ * チーム戦略アドバイス（中盤15分 / 終盤25分 の2回）
+ */
+function handleTeamStrategy(gameData, me, allies, enemies) {
+  const gameTime = gameData.gameData?.gameTime || 0
+
+  // 終盤チェック（25分）
+  if (gameTime >= 1500 && !state.lateStrategyLoaded) {
+    state.lateStrategyLoaded = true
+    _fetchStrategy(gameData, me, allies, enemies, 'late')
+    return
+  }
+
+  // 中盤チェック（15分）
+  if (gameTime >= 900 && !state.midStrategyLoaded) {
+    state.midStrategyLoaded = true
+    _fetchStrategy(gameData, me, allies, enemies, 'mid')
+    return
+  }
+}
+
+function _fetchStrategy(gameData, me, allies, enemies, phase) {
+  if (!state.aiClient || !state.aiEnabled || !state.currentMatchAiAllowed) return
+
+  const posToRole = { TOP: 'TOP', JUNGLE: 'JG', MIDDLE: 'MID', BOTTOM: 'ADC', UTILITY: 'SUP' }
+  const myRole = posToRole[me.position] || me.position
+
+  const allyTeam = (allies || []).map(p => ({
+    champion: p.jaName || p.enName,
+    role: posToRole[p.position] || p.position,
+    level: p.level || 0,
+    kda: `${p.scores?.kills || 0}/${p.scores?.deaths || 0}/${p.scores?.assists || 0}`,
+    items: (p.items || []).filter(i => i.itemID > 0).length,
+    status: (p.scores?.kills || 0) >= 5 ? 'fed' : (p.scores?.deaths || 0) >= 5 ? 'behind' : 'normal',
+  }))
+
+  const enemyTeam = (enemies || []).map(p => ({
+    champion: p.jaName || p.enName,
+    role: posToRole[p.position] || p.position,
+    level: p.level || 0,
+    kda: `${p.scores?.kills || 0}/${p.scores?.deaths || 0}/${p.scores?.assists || 0}`,
+    items: (p.items || []).filter(i => i.itemID > 0).length,
+    status: (p.scores?.kills || 0) >= 5 ? 'fed' : (p.scores?.deaths || 0) >= 5 ? 'behind' : 'normal',
+  }))
+
+  const allyKills = allies.reduce((s, p) => s + (p.scores?.kills || 0), 0)
+  const enemyKills = enemies.reduce((s, p) => s + (p.scores?.kills || 0), 0)
+  const killDiff = allyKills - enemyKills
+  const situation = killDiff >= 5 ? 'ahead' : killDiff <= -5 ? 'behind' : 'even'
+
+  const enemyThreats = enemies
+    .filter(p => (p.scores?.kills || 0) >= 4)
+    .map(p => ({ champion: p.jaName || p.enName, kills: p.scores?.kills, deaths: p.scores?.deaths }))
+
+  const input = {
+    phase,
+    game_time: Math.floor(gameData.gameData?.gameTime || 0),
+    me: { champion: me.jaName || me.enName, role: myRole },
+    ally_team: allyTeam,
+    enemy_team: enemyTeam,
+    kill_diff: killDiff,
+    situation,
+    enemy_threats: enemyThreats,
+  }
+
+  console.log(`[Strategy] Fetching ${phase} strategy (t=${input.game_time}s, ${situation})`)
+  broadcast('strategy:loading', true)
+
+  state.aiClient.getTeamStrategy(input, phase).then(result => {
+    broadcast('strategy:loading', false)
+    if (result) {
+      result._phase = phase
+      console.log(`[Strategy] ${phase} strategy received`)
+      broadcast('strategy:team', result)
+    }
+  }).catch(err => {
+    broadcast('strategy:loading', false)
+    console.error(`[Strategy] ${phase} error: ${err.message}`)
+  })
+}
+
 module.exports = {
   init,
   handleMatchupTip,
   handleMatchupItems,
+  handleTeamStrategy,
   useFallbackSubstituteItems,
 }

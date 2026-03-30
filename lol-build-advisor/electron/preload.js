@@ -110,6 +110,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('champselect:extras', handler)
     return () => ipcRenderer.removeListener('champselect:extras', handler)
   },
+  onTeamStrategy: (cb) => {
+    const handler = (_, data) => cb(data)
+    ipcRenderer.on('strategy:team', handler)
+    return () => ipcRenderer.removeListener('strategy:team', handler)
+  },
+  onTeamStrategyLoading: (cb) => {
+    const handler = (_, loading) => cb(loading)
+    ipcRenderer.on('strategy:loading', handler)
+    return () => ipcRenderer.removeListener('strategy:loading', handler)
+  },
   onChampSelectMeta: (cb) => {
     const handler = (_, meta) => cb(meta)
     ipcRenderer.on('champselect:meta', handler)

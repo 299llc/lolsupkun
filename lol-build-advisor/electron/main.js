@@ -112,6 +112,10 @@ const state = {
   matchupGameLengths: null,
   matchupItemsPromise: null,
 
+  // チーム戦略
+  midStrategyLoaded: false,
+  lateStrategyLoaded: false,
+
   _lastSuggFingerprint: null,
 
   // 最後に送信したデータ（コンパクトウィンドウ再送用）
@@ -907,6 +911,9 @@ function resetBuildState() {
   state.matchupTipLoaded = false
   state.matchupGameLengths = null
   state.matchupItemsPromise = null
+  // チーム戦略
+  state.midStrategyLoaded = false
+  state.lateStrategyLoaded = false
   // AI提案
   state.lastSuggestion = null
   state.aiPending = false
@@ -1350,6 +1357,9 @@ async function handleGameData(gameData) {
 
   // マッチアップTip
   matchupFeature.handleMatchupTip(me, resolvedPosition, enemies)
+
+  // チーム戦略（中盤15分・終盤25分）
+  matchupFeature.handleTeamStrategy(gameData, me, allies, enemies)
 
   // イベント取得（オブジェクト状況 + マクロコンテキスト両方で使う）
   let events = gameData.events?.Events || []

@@ -158,7 +158,7 @@ function ObjectivesPanel({ objectives }) {
   )
 }
 
-export function MainScreen({ data, coreBuild, aiSuggestion, aiLoading, positionSelectChamp, substituteItems, coaching, coachingLoading, substituteError, matchupTip, matchupLoading, macroAdvice, macroLoading, compact, objectivesStatus, ruleAlerts, skillOrder }) {
+export function MainScreen({ data, coreBuild, aiSuggestion, aiLoading, positionSelectChamp, substituteItems, coaching, coachingLoading, substituteError, matchupTip, matchupLoading, macroAdvice, macroLoading, compact, objectivesStatus, ruleAlerts, skillOrder, teamStrategy, teamStrategyLoading }) {
   const { players, gameData: gd, activePlayer, myTeamSide, ddragon, ended, isSpectator, allPlayers } = data
   const { me, allies, enemies } = players || {}
   const gameTime = gd?.gameTime || 0
@@ -273,7 +273,7 @@ export function MainScreen({ data, coreBuild, aiSuggestion, aiLoading, positionS
       {/* ===== 右カラム: AI情報 ===== */}
       <div className="flex flex-col gap-1.5 overflow-y-auto overflow-x-hidden min-w-0 pl-1 pr-2">
         {/* 対面アドバイス（レーン戦終了後は自動折りたたみ） */}
-        <MatchupTip tip={matchupTip} loading={matchupLoading} laningOver={gameTime >= 900} />
+        <MatchupTip tip={matchupTip} loading={matchupLoading} laningOver={gameTime >= 900} teamStrategy={teamStrategy} teamStrategyLoading={teamStrategyLoading} />
 
         {/* ビルドパネル */}
         <BuildPanel

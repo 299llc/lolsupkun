@@ -11,7 +11,7 @@ import { CompactView } from './components/CompactView'
 const isCompact = new URLSearchParams(window.location.search).has('compact')
 
 export default function App() {
-  const { status, gameData, coreBuild, aiSuggestion, aiLoading, positionSelectChamp, substituteItems, champSelectTeam, coaching, coachingLoading, substituteError, matchupTip, matchupLoading, champSelectExtras, macroAdvice, macroLoading, objectivesStatus, ruleAlerts, champSelectMeta } = useGameData()
+  const { status, gameData, coreBuild, aiSuggestion, aiLoading, positionSelectChamp, substituteItems, champSelectTeam, coaching, coachingLoading, substituteError, matchupTip, matchupLoading, champSelectExtras, macroAdvice, macroLoading, objectivesStatus, ruleAlerts, champSelectMeta, teamStrategy, teamStrategyLoading } = useGameData()
   const [showSettings, setShowSettings] = useState(false)
   const [showDebug, setShowDebug] = useState(false)
   const [showOverlayPreview, setShowOverlayPreview] = useState(false)
@@ -81,6 +81,8 @@ export default function App() {
             objectivesStatus={objectivesStatus}
             ruleAlerts={ruleAlerts}
             skillOrder={champSelectExtras?.skills?.order}
+            teamStrategy={teamStrategy}
+            teamStrategyLoading={teamStrategyLoading}
           />
         ) : status === 'champselect' ? (
           <ChampSelectScreen suggestion={coreBuild} aiLoading={aiLoading} ddragon={gameData?.ddragon || champSelectExtras?.ddragon} team={champSelectTeam} extras={champSelectExtras} meta={champSelectMeta} />
