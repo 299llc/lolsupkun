@@ -19,6 +19,7 @@ export function useGameData() {
   const [macroLoading, setMacroLoading] = useState(false)
   const [objectivesStatus, setObjectivesStatus] = useState(null)
   const [ruleAlerts, setRuleAlerts] = useState([])
+  const [champSelectMeta, setChampSelectMeta] = useState(null)
 
   useEffect(() => {
     if (!window.electronAPI) return
@@ -49,6 +50,7 @@ export function useGameData() {
             setMacroLoading(false)
             setObjectivesStatus(null)
             setRuleAlerts([])
+            setChampSelectMeta(null)
             setPositionSelectChamp(null)
             setCoachingLoading(false)
           }
@@ -77,9 +79,10 @@ export function useGameData() {
       window.electronAPI.onMacroLoading?.(setMacroLoading),
       window.electronAPI.onObjectivesStatus?.(setObjectivesStatus),
       window.electronAPI.onRuleAlerts?.(setRuleAlerts),
+      window.electronAPI.onChampSelectMeta?.(setChampSelectMeta),
     ]
     return () => unsubs.forEach(fn => fn?.())
   }, [])
 
-  return { status, gameData, coreBuild, aiSuggestion, aiLoading, positionSelectChamp, substituteItems, champSelectTeam, coaching, coachingLoading, substituteError, matchupTip, matchupLoading, champSelectExtras, macroAdvice, macroLoading, objectivesStatus, ruleAlerts }
+  return { status, gameData, coreBuild, aiSuggestion, aiLoading, positionSelectChamp, substituteItems, champSelectTeam, coaching, coachingLoading, substituteError, matchupTip, matchupLoading, champSelectExtras, macroAdvice, macroLoading, objectivesStatus, ruleAlerts, champSelectMeta }
 }

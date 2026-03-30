@@ -110,6 +110,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('champselect:extras', handler)
     return () => ipcRenderer.removeListener('champselect:extras', handler)
   },
+  onChampSelectMeta: (cb) => {
+    const handler = (_, meta) => cb(meta)
+    ipcRenderer.on('champselect:meta', handler)
+    return () => ipcRenderer.removeListener('champselect:meta', handler)
+  },
   onMacroAdvice: (cb) => {
     const handler = (_, advice) => cb(advice)
     ipcRenderer.on('macro:advice', handler)

@@ -191,7 +191,45 @@ function SkillOrderGrid({ tree }) {
   )
 }
 
-export function ChampSelectScreen({ suggestion, aiLoading, ddragon, team, extras }) {
+const POSITION_LABELS = {
+  TOP: 'トップ', JUNGLE: 'ジャングル', MIDDLE: 'ミッド', BOTTOM: 'ボット', UTILITY: 'サポート',
+  top: 'トップ', jungle: 'ジャングル', mid: 'ミッド', adc: 'ボット', support: 'サポート',
+}
+
+function MetaChampions({ meta, ddragon }) {
+  if (!meta?.champions?.length) return null
+  const ddBase = ddragon || DDRAGON_FALLBACK
+  const posLabel = POSITION_LABELS[meta.position] || meta.position
+
+  return (
+    <div className="py-2 px-3 rounded bg-lol-surface border border-lol-gold-dim/20">
+      <div className="flex items-center gap-1.5 mb-2">
+        <Flame size={12} className="text-lol-gold" />
+        <span className="text-[11px] font-heading text-lol-gold tracking-wider">{posLabel} TIER LIST</span>
+      </div>
+      <div className="grid grid-cols-5 gap-1.5">
+        {meta.champions.slice(0, 10).map((champ, i) => (
+          <div key={champ.name} className="flex flex-col items-center">
+            <div className="relative">
+              <img
+                src={`${ddBase}/img/champion/${champ.name}.png`}
+                alt={champ.name}
+                className={`w-8 h-8 rounded-md border ${champ.tier === 1 ? 'border-lol-gold/60' : 'border-white/15'}`}
+                onError={(e) => { e.target.style.display = 'none' }}
+              />
+              <span className={`absolute -top-1 -right-1 text-[8px] font-bold px-1 rounded ${champ.tier === 1 ? 'bg-lol-gold text-lol-bg' : 'bg-white/20 text-white/70'}`}>
+                {i + 1}
+              </span>
+            </div>
+            <span className="text-[8px] text-lol-text mt-0.5 truncate w-full text-center">{Math.round(champ.winRate * 100)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function ChampSelectScreen({ suggestion, aiLoading, ddragon, team, extras, meta }) {
   const analysis = analyzeTeamComp(team)
   const me = team?.find(m => m.isMe)
   const ddBase = ddragon || DDRAGON_FALLBACK
@@ -361,13 +399,17 @@ export function ChampSelectScreen({ suggestion, aiLoading, ddragon, team, extras
         </div>
       )}
 
+      {!suggestion && !aiLoading && meta && (
+        <MetaChampions meta={meta} ddragon={ddragon} />
+      )}
+
       <BuildRecommendation
         suggestion={suggestion}
         loading={aiLoading}
         ddragon={ddragon}
       />
 
-      {!suggestion && !aiLoading && !analysis && (
+      {!suggestion && !aiLoading && !analysis && !meta && (
         <p className="text-sm text-lol-text text-center">
           チャンピオンをピックするとコアビルドを表示します
         </p>

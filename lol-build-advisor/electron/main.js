@@ -11,7 +11,7 @@ const { OllamaSetup } = require('./api/ollamaSetup')
 const { ContextBuilder, extractEnName } = require('./api/contextBuilder')
 const { DiffDetector } = require('./api/diffDetector')
 const { setCacheDir, initPatchData, getVersion, getChampionById, getItemById, getSpells, loadSpellsForMatch, refreshCache } = require('./api/patchData')
-const { fetchChampionBuild, buildCoreBuildIds } = require('./api/opggClient')
+const { fetchChampionBuild, buildCoreBuildIds, fetchLaneMetaChampions } = require('./api/opggClient')
 const { LcuClient } = require('./api/lcuClient')
 const { detectFlags } = require('./core/championAnalysis')
 const { RuleEngine } = require('./core/ruleEngine')
@@ -1007,6 +1007,7 @@ async function checkChampSelect() {
     if (phase !== 'ChampSelect') {
       if (state.champSelectChampId) {
         state.champSelectChampId = null
+        state.laneMetaFetched = false
         resetBuildState()
         state.currentAnalysis = null
       }
@@ -1047,7 +1048,18 @@ async function checkChampSelect() {
       })
     broadcast('champselect:team', teamComp)
 
+    // ロールが確定したらメタチャンピオンを取得（1回のみ）
     const myCell = session.myTeam.find(p => p.cellId === session.localPlayerCellId)
+    const myRole = myCell?.assignedPosition || ''
+    if (myRole && !state.laneMetaFetched) {
+      state.laneMetaFetched = true
+      fetchLaneMetaChampions(myRole).then(champions => {
+        if (champions.length > 0) {
+          broadcast('champselect:meta', { position: myRole, champions, ddragon: state.ddragonBase })
+        }
+      }).catch(err => console.error(`[ChampSelect] Meta fetch error: ${err.message}`))
+    }
+
     if (!myCell || !myCell.championId || myCell.championId === 0) return
     if (state.champSelectChampId === myCell.championId) return
     state.champSelectChampId = myCell.championId

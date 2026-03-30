@@ -437,4 +437,45 @@ async function fetchMatchupWinRate(myChampion, opponentChampion, position) {
   }
 }
 
-module.exports = { fetchChampionBuild, buildCoreBuildIds, normalizeChampionName, normalizePosition, fetchMatchupItems, fetchMatchupWinRate }
+/**
+ * レーン別メタチャンピオン（ティアリスト）を取得
+ * @param {string} position - ポジション (例: "TOP", "SUPPORT", "UTILITY")
+ * @returns {Array<{name: string, tier: number, rank: number, winRate: number, pickRate: number, banRate: number}>}
+ */
+async function fetchLaneMetaChampions(position) {
+  const pos = normalizePosition(position)
+  console.log(`[OP.GG] Fetching lane meta: ${pos}`)
+
+  try {
+    const raw = await mcpCall('lol_list_lane_meta_champions', {
+      lane: pos,
+      lang: 'en_US'
+    })
+    if (!raw) return []
+
+    // Top("ChampName",isRip,play,win,kills,winRate,pickRate,roleRate,banRate,kda,tier,rank,rankPrev,rankPrevPatch)
+    const regex = /Top\("([^"]+)",(true|false),(\d+),(\d+),(\d+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),([\d.]+),(\d+),(\d+),/g
+    const champions = []
+    let m
+    while ((m = regex.exec(raw)) !== null) {
+      champions.push({
+        name: m[1],
+        winRate: parseFloat(m[6]),
+        pickRate: parseFloat(m[7]),
+        banRate: parseFloat(m[9]),
+        tier: parseInt(m[11]),
+        rank: parseInt(m[12]),
+      })
+    }
+
+    // Tier 1-2のみ、ランク順
+    const filtered = champions.filter(c => c.tier <= 2).sort((a, b) => a.rank - b.rank).slice(0, 10)
+    console.log(`[OP.GG] Lane meta ${pos}: ${filtered.length} champions (top tier)`)
+    return filtered
+  } catch (err) {
+    console.error(`[OP.GG] Lane meta error: ${err.message}`)
+    return []
+  }
+}
+
+module.exports = { fetchChampionBuild, buildCoreBuildIds, normalizeChampionName, normalizePosition, fetchMatchupItems, fetchMatchupWinRate, fetchLaneMetaChampions }
